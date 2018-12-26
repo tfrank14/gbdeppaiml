@@ -3,7 +3,7 @@ rm(list=ls())
 windows <- Sys.info()[1][["sysname"]]=="Windows"
 root <- ifelse(windows,"J:/","/home/j/")
 user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
-code.dir <- paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/eppasm-1/")
+code.dir <- paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/gbdeppaiml/")
 ## Packages
 library(data.table); library(mvtnorm); library(survey)
 
@@ -17,7 +17,7 @@ if(length(args) > 0) {
 	i <- as.integer(Sys.getenv("SGE_TASK_ID"))
 } else {
 	run.name <- "181126_test"
-	loc <- "MWI"
+	loc <- "IND_4853"
 	proj.end <- 2019
 	i <- 1
 }
@@ -28,6 +28,7 @@ stop.year <- 2019
 trans.params.sub <- TRUE
 pop.sub <- TRUE
 art.sub <- FALSE
+anc.sub <- FALSE
 prev.sub <- TRUE
 anc.prior <- TRUE
 no.anc <- FALSE
@@ -49,7 +50,6 @@ pdf.path <- paste0(out.dir, "/test_results", i, ".pdf")
 library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
 setwd(code.dir)
 devtools::load_all()
-source(paste0(code.dir, '/gbd/read_spec_object.R'))
 
 ### Tables
 loc.table <- data.table(get_locations(hiv_metadata = T))
