@@ -162,6 +162,7 @@ create_hivproj_param <- function(loc, i, start.year = 1970, stop.year = 2019){
     } else if(length(incrr_sex) > length(proj.years)){
       incrr_sex <- incrr_sex[1:length(proj.years)]
     }
+    names(incrr_sex) <- proj.years
   }
   ## Subbing in previous (GBD 2017 and before) spec inputs for age incrr
   incrr_age <- fread(paste0(aim.dir, 'sex_age_pattern/age_IRRs/Feb17/GEN_IRR.csv'))
@@ -204,6 +205,7 @@ create_hivproj_param <- function(loc, i, start.year = 1970, stop.year = 2019){
   art_mort <- array(0, c(3, 7, 4, 2))
   artmx_timerr <- array(1, c(3, length(proj.years)))
   median_cd4init <- rep(0, length(proj.years))
+  names(median_cd4init) <- proj.years
   
   ## ART variables
   ## For now, using last year's extrapolated numbers
@@ -231,6 +233,7 @@ create_hivproj_param <- function(loc, i, start.year = 1970, stop.year = 2019){
   ##TODO: Not sure where to get art dropout and vert trans from
   ## For now, using previous vertical transmission results
   art_dropout <- rep(0, length(proj.years))
+  names(art_dropout) <- proj.years
   spec <- fread(paste0('/share/hiv/spectrum_draws/180702_numbat_combined/compiled/stage_2/', loc, '_ART_data.csv'))
   verttrans <- spec[run_num == i, .(birth_prev = sum(birth_prev), hiv_births = sum(hiv_births)), by = 'year']
   verttrans[, value := ifelse(hiv_births == 0, 0, birth_prev/hiv_births)]
