@@ -25,11 +25,10 @@ if(length(args) > 0) {
 ### Arguments
 start.year <- 1970
 stop.year <- 2019
-trans.params <- TRUE
-gbd.pop <- TRUE
+trans.params.sub <- TRUE
+pop.sub <- TRUE
 art.sub <- FALSE
 prev.sub <- TRUE
-collapse <- TRUE
 anc.prior <- TRUE
 no.anc <- FALSE
 eq.prior <- TRUE
@@ -50,75 +49,25 @@ pdf.path <- paste0(out.dir, "/test_results", i, ".pdf")
 library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
 setwd(code.dir)
 devtools::load_all()
+source(paste0(code.dir, '/gbd/read_spec_object.R'))
 
 ### Tables
 loc.table <- data.table(get_locations(hiv_metadata = T))
 
 ### Code
-## Prep data and collapse location subpopulations
-if(grepl('IND', loc)){
-  dt <- prepare_spec_fit_ind(loc)
-}else{
-  dt <- prepare_spec_fit_gbd(loc, collapse, i, proj.end, gbd.pop, popadjust, popupdate, use_ep5)
-}
+## Read in spectrum object, sub in GBD parameters
+dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, 
+                       pop.sub, anc.sub, prev.sub, popadjust = TRUE, age.prev = FALSE)
 
-
-## Substitute IHME data
-# Prevalence surveys
-if(prev.sub) {
-	if((collapse & length(dt) == 1) | grepl("IND_", loc)) {
-		print("Substituting prevalence surveys")
-		dt <- sub.prev(loc, dt)	
-		dt <- sub.prev.granular(dt, loc)
-	}
-}
-
-# # ANC data
-# high.risk.list <- loc.table[epp == 1 & collapse_subpop == 0 & !grepl("ZAF", ihme_loc_id) & !grepl("KEN", ihme_loc_id), ihme_loc_id]
-# ken.anc.path <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/data/prepped/kenya_anc_map.csv")
-# ken.anc <- fread(ken.anc.path)
-# no.anc.ken <- setdiff(loc.table[epp == 1 & grepl("KEN", ihme_loc_id), ihme_loc_id], ken.anc$ihme_loc_id)
-# if(loc %in% c(high.risk.list, "PNG", no.anc.ken)) {
-# 	anc.backcast <- F
-# }
-# if(anc.backcast) {
-# 	dt <- sub.anc(loc, dt)
-# }
-
-# # Transition parameters
-if(trans.params) {
-  print('Substituting transition parameters')
-	dt <- sub.off.art(dt, loc, i)
-	dt <- sub.on.art(dt, loc, i)
-	dt <- sub.cd4.prog(dt, loc, i)
-}
 
 ## Fit model
-fit <- list() 
-for(subpop in names(dt)) {
-	print(subpop)
-	# if(subpop == "HSH") {
-	# 	attr(dt[[subpop]], "likdat")$hhslik.dat[1:2, "used"] <- FALSE
-	# }
-	if(all(!attr(dt[[subpop]], "eppd")$anc.used)) {
-        no.anc <<- TRUE
-	} else {
-		no.anc <<- FALSE
-	}
-	attr(dt[[subpop]], "eppd")$anc.used[1] <- FALSE
-	attr(dt[[subpop]], "eppfp")$artelig.idx.ts <- as.integer(attr(dt[[subpop]], "eppfp")$artelig.idx.ts)
-	# if(anc.prior) {
-	# 	set.anc.prior(loc, subpop)
-	# }
-	fit[[subpop]] <- fitmod(dt[[subpop]],fitincrr = "linincrr", eppmod = 'rhybrid', rw_start = 2010,  B0=1e3, B=1e2, opt_iter=1:2*5, number_k = 50)
-}
+fit <- fitmod(dt, eppmod = 'rhybrid', fitincrr = 'linincrr', rw_start = 2010,  B0=1e3, B=1e2, opt_iter=1:2*5, number_k = 5)
 
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)
 ## through the end of the projection period.
-## Jeff ? - random walk in data period vs post data?
-fit <- lapply(fit, extend_projection, proj_years = stop.year - start.year)
+fit <- extend_projection(fit, proj_years = stop.year - start.year)
 
 ## The function aggr_specfit() involves simulating the model for all resamples in each 
 ## subregion and summing the following `pop`, `hivpop`, and `artpop` arrays for each of 

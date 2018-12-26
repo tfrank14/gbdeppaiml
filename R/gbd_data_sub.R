@@ -1,6 +1,8 @@
 #' @import data.table
 
 aim.dir <- paste0(root,"/WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/AIM_assumptions/")
+## To aid in aligning with age group storage in eppasm
+age.list <- c('15-24', '15-24', '15-24', '25-34', '25-34', '35-44', '35-44', '45+', '45+')
 extend.years <- function(dt, years){
   dt <- as.data.table(dt)
   if('year_id' %in% names(dt)){setnames(dt, 'year_id', 'year')}
@@ -31,7 +33,7 @@ sub.pop.params.demp <- function(demp, loc, k){
   }
   
   ## Survival
-  surv <- fread(paste0('/share/gbd/WORK/02_mortality/03_models/5_lifetables/results/hivfree_sx/locs/', loc, '_life_tables.csv'))[,V1 := NULL]
+  surv <- fread(paste0('/share/gbd/WORK/02_mortality/03_models/5_lifetables/results/hivfree_sx/locs/', loc, '_life_tables.csv'))
   surv <- melt(surv, id.vars = c('sex', 'year', 'age'))
   surv[, variable := as.integer(gsub('px', '', variable))]
   surv <- surv[variable == k]
@@ -82,6 +84,7 @@ sub.pop.params.demp <- function(demp, loc, k){
   
   
   ## SRB
+  ##TODO
   
   ## Migration
   mig <- fread(paste0(dir, '/migration/', loc, '.csv'))
@@ -171,20 +174,18 @@ sub.prev <- function(loc, dt){
     data4[,idx := year - (attr(dt[[loc]], 'eppfp')$tsEpidemicStart-1.5)]
     data4[, agegr := '15-49']
     data4[, sex := 'both']
-    ## TODO: what is deff
     data4[, deff := 2]
     data4[, deff_approx := 2]
+    ## TODO: Fix ZAF
     if(grepl("ZAF", loc)) {
       drop.years <- unique(c(data4$year,data4$year+1,data4$year-1))
       data4 <- rbind(data4,attr(dt[[1]], 'likdat')$hhslik.dat[! attr(dt[[1]], 'likdat')$hhslik.dat$year %in% drop.years, ])
     } 
     data4 <- data4[order(data4$year),]
-    
-    attr(dt[[gen.pop.i]], 'eppd')$hhs <- as.data.frame(data4[, .(year, sex, agegr, n, prev, se, used, deff, deff_approx)])
-    if(all(!attr(dt[[gen.pop.i]], "eppd")$anc.used)) {
-      attr(dt[[gen.pop.i]], 'likdat')$hhslik.dat <- data4
-    } else {
-      attr(dt[[gen.pop.i]], 'likdat') <- prepare_likdat(attr(dt[[gen.pop.i]], 'eppd'), attr(dt[[gen.pop.i]], "specfp"))      
+    if(!length(dt)){
+      attr(dt, 'eppd')$hhs <- as.data.frame(data4[, .(year, sex, agegr, n, prev, se, used, deff, deff_approx)])
+    } else{
+        attr(dt[[gen.pop.i]], 'eppd')$hhs <- as.data.frame(data4[, .(year, sex, agegr, n, prev, se, used, deff, deff_approx)])
     }
   } else { 
     print(paste0("No surveys for ",loc))
@@ -206,7 +207,11 @@ sub.prev.granular <- function(dt, loc){
   } else {
     gen.pop.i <- which(names(dt) %in% gen.pop.dict)
   }
-  attr(dt[[gen.pop.i]], 'eppd')$hhs <- as.data.frame(age.prev.dt)
+  if(!length(dt)){
+    attr(dt, 'eppd')$hhs <- as.data.frame(age.prev.dt)
+  } else{
+    attr(dt[[gen.pop.i]], 'eppd')$hhs <- as.data.frame(age.prev.dt)
+  }
   return(dt)
 }
 
@@ -232,22 +237,25 @@ sub.off.art <- function(dt, loc, k) {
   mortnoart <- mortnoart[cd4=="LT50CD4", cat := 7] 
   mortnoart[,risk:=-1*log(1-prob)]
   mortnoart <- mortnoart[,.(age,risk,cat)]
-  ## ???
+  age.list <- c('15-24', '15-24', '15-24', '25-34', '25-34', '35-44', '35-44', '45+', '45+')
   age.index <- list(a = '15-24', b = '15-24', c = '15-24', d = '25-34', e = '25-34', f = '35-44', g = '35-44', h = '45+', i = '45+')
-  replace <- array(0, c(7, length(dimnames(attr(dt[[1]], 'specfp')$cd4_mort)$agecat), 2))
-  dimnames(replace) <- list(cd4stage = paste0(1:7), agecat = dimnames(attr(dt[[1]], 'specfp')$cd4_mort)$agecat, sex = c('Male', 'Female'))
+  replace <- array(0, c(7, length(age.list), 2))
+  dimnames(replace) <- list(cd4stage = paste0(1:7), agecat = age.list, sex = c('Male', 'Female'))
   for(c.sex in c('Male', 'Female')){
-    for(c.ageindex in 1:length(dimnames(attr(dt[[1]], 'specfp')$cd4_mort)$agecat)){
+    for(c.ageindex in 1:length(age.list)){
         for(c.cd4 in paste0(1:7)){
           replace[c.cd4, c.ageindex, c.sex] = as.numeric(mortnoart[age == age.index[[c.ageindex]] & cat == c.cd4, risk])
       }
     }
   }  
-  
-  for (n in names(dt)) {
-    for(i in 1:7){
-      attr(dt[[n]], 'specfp')$cd4_mort <- replace
-    }
+  if(!length(dt)){
+    attr(dt, 'specfp')$cd4_mort <- replace
+  } else{
+      for (n in names(dt)) {
+        for(i in 1:7){
+          attr(dt[[n]], 'specfp')$cd4_mort <- replace
+        }
+      }
   }
   return(dt)
 }
@@ -291,11 +299,11 @@ sub.on.art <- function(dt, loc, k) {
   setnames(mortart, c('age', 'cat'), c('agecat', 'cd4stage'))
   
   age.index <- list(a = '15-24', b = '15-24', c = '15-24', d = '25-34', e = '25-34', f = '35-44', g = '35-44', h = '45+', i = '45+')
-  replace <- array(0, c(3, 7, length(dimnames(attr(dt[[1]], 'specfp')$art_mort)$agecat), 2))
-  dimnames(replace) <- list(artdur = c('ART0MOS', 'ART6MOS', 'ART1YR'), cd4stage = paste0(1:7), agecat = dimnames(attr(dt[[1]], 'specfp')$art_mort)$agecat, sex = c('Male', 'Female'))
+  replace <- array(0, c(3, 7, length(age.list), 2))
+  dimnames(replace) <- list(artdur = c('ART0MOS', 'ART6MOS', 'ART1YR'), cd4stage = paste0(1:7), agecat = age.list, sex = c('Male', 'Female'))
   
   for(c.sex in c('Male', 'Female')){
-    for(c.ageindex in 1:length(dimnames(attr(dt[[1]], 'specfp')$art_mort)$agecat)){
+    for(c.ageindex in 1:length(age.list)){
       for(c.dur in c('ART0MOS', 'ART6MOS', 'ART1YR')){
         for(c.cd4 in paste0(1:7)){
             replace[c.dur, c.cd4, c.ageindex, c.sex] = as.numeric(mortart[sex == c.sex & artdur == c.dur & agecat == age.index[[c.ageindex]] & cd4stage == c.cd4, risk])
@@ -303,10 +311,13 @@ sub.on.art <- function(dt, loc, k) {
       }
     }
   }
-  for(n in names(dt)){
-    attr(dt[[n]], 'specfp')$art_mort <- replace
+  if(!length(dt)){
+    attr(dt, 'specfp')$art_mort <- replace
+  } else{
+      for(n in names(dt)){
+        attr(dt[[n]], 'specfp')$art_mort <- replace
+      }
   }
-  
   return(dt)
 }
 
@@ -333,17 +344,21 @@ sub.cd4.prog <- function(dt, loc, k){
   progdata[,risk:=-1*log(1-prob)]
   
   age.index <- list(a = '15-24', b = '15-24', c = '15-24', d = '25-34', e = '25-34', f = '35-44', g = '35-44', h = '45+', i = '45+')
-  replace <- array(0, c(6, length(dimnames(attr(dt[[1]], 'specfp')$cd4_prog)$agecat), 2))
-  dimnames(replace) <- list(cd4stage = paste0(1:6), agecat = dimnames(attr(dt[[1]], 'specfp')$cd4_prog)$agecat, sex = c('Male', 'Female'))
+  replace <- array(0, c(6, length(age.list), 2))
+  dimnames(replace) <- list(cd4stage = paste0(1:6), agecat = age.list, sex = c('Male', 'Female'))
   for(c.sex in c('Male', 'Female')){
-    for(c.ageindex in 1:length(dimnames(attr(dt[[1]], 'specfp')$cd4_prog)$agecat)){
+    for(c.ageindex in 1:length(age.list)){
       for(c.cd4 in paste0(1:6)){
         replace[c.cd4, c.ageindex, c.sex] = as.numeric(progdata[age == age.index[[c.ageindex]] & cat == c.cd4, risk])
       }
     }
   }  
-  for (n in names(dt)) {
-    attr(dt[[n]], 'specfp')$cd4_prog <- replace
-  }	
+  if(!length(dt)){
+    attr(dt, 'specfp')$cd4_prog <- replace
+  } else{
+      for (n in names(dt)) {
+        attr(dt[[n]], 'specfp')$cd4_prog <- replace
+      }	
+  }
   return(dt)
 }
