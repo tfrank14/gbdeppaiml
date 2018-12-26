@@ -8,11 +8,16 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
   ## Population parameters
   if(pop.sub){
     ## Unfortunately currently necessary to read PJNZ here to sub directly into demp and then call create_spectrum_fixpar
-    pjnz <- find_pjnz(loc)[[1]]
-    demp <- read_specdp_demog_param(pjnz, use_ep5=FALSE)
+   if(grepl('IND', loc)){
+     demp <- create_spectrum_demog_param(loc, start.year, stop.year)
+     projp <- create_hivproj_param(loc, i, start.year, stop.year)
+   } else{
+     pjnz <- find_pjnz(loc)[[1]]
+     demp <- read_specdp_demog_param(pjnz, use_ep5=FALSE)
+     projp <- read_hivproj_param(pjnz, use_ep5=FALSE)
+  }
     print('Substituting demographic parameters')
     demp <- sub.pop.params.demp(demp, loc, i)
-    projp <- read_hivproj_param(pjnz, use_ep5=FALSE)
     specfp <- create_spectrum_fixpar(projp, demp, proj_start = start.year, proj_end = stop.year, popadjust=popadjust, time_epi_start=attr(dt, 'specfp')$ss$time_epi_start)
     attr(dt, 'specfp') <- specfp
   }
@@ -46,6 +51,7 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
     dt <- sub.on.art(dt, loc, i)
     dt <- sub.cd4.prog(dt, loc, i)
   }
+  return(dt)
   
 }
   

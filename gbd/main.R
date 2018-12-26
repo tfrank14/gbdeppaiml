@@ -56,16 +56,13 @@ loc.table <- data.table(get_locations(hiv_metadata = T))
 
 ### Code
 ## Read in spectrum object, sub in GBD parameters
+
 dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, 
                        pop.sub, anc.sub, prev.sub, popadjust = TRUE, age.prev = FALSE)
 
-
 ## Fit model
 fit <- list() 
-fit[[1]] <- fitmod(dt, eppmod = 'rhybrid', 
-              fitincrr = 'linincrr', rw_start = 2010, 
-              B0=1e3, B=1e2, opt_iter=1:2*5, number_k = 5,
-              ageprev="binom")
+fit[[1]] <- fitmod(dt, eppmod = 'rhybrid', fitincrr = 'linincrr', rw_start = 2010,B0=1e3, B=1e2, opt_iter=1:2*5, number_k = 5,ageprev="binom")
 
 
 ## When fitting, the random-walk based models only simulate through the end of the
