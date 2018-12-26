@@ -1,3 +1,7 @@
+## Collapses PJNZ files to create eppd (collapse_epp())
+## Reads in demp and projp to create specfp
+## Saves object as .rds file (in order to avoid reading and collapsing PJNZ files every run)
+
 prepare_spec_object <- function(loc, popadjust = TRUE, popupdate=TRUE, use_ep5=FALSE){
   
   pjnz <- find_pjnz(loc)[[1]]
