@@ -10,7 +10,7 @@ prepare_spec_object <- function(loc, popadjust = TRUE, popupdate=TRUE, use_ep5=F
     eppd.new <- list()
     eppd.new[[loc]] <- eppd[[names(which(zaf.dict == loc))]]  
     eppd <- eppd.new
-    # eppd[[1]]$ancrtcens <- data.frame(year=integer(), prev=integer(), n=integer())
+    eppd[[1]]$ancrtcens <- data.frame(year=integer(), prev=integer(), n=integer())
     # eppd.tot[[subpop.tot]]$ancrtcens <- NULL
   } else{
     epp.totals <- collapse_epp(loc)
