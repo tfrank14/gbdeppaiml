@@ -17,7 +17,7 @@ if(length(args) > 0) {
 	i <- as.integer(Sys.getenv("SGE_TASK_ID"))
 } else {
 	run.name <- "181126_test"
-	loc <- "IND_4853"
+	loc <- "SDN"
 	proj.end <- 2019
 	i <- 1
 }
@@ -33,7 +33,7 @@ prev.sub <- TRUE
 anc.prior <- TRUE
 no.anc <- FALSE
 eq.prior <- TRUE
-anc.backcast <- FALSE
+anc.backcast <- TRUE
 num.knots <- 7
 popadjust <- NULL
 popupdate <- TRUE
@@ -61,20 +61,25 @@ dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub,
 
 
 ## Fit model
-fit <- fitmod(dt, eppmod = 'rhybrid', fitincrr = 'linincrr', rw_start = 2010,  B0=1e3, B=1e2, opt_iter=1:2*5, number_k = 5)
+fit <- list() 
+fit[[1]] <- fitmod(dt, eppmod = 'rhybrid', 
+              fitincrr = 'linincrr', rw_start = 2010, 
+              B0=1e3, B=1e2, opt_iter=1:2*5, number_k = 5,
+              ageprev="binom")
 
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)
 ## through the end of the projection period.
-fit <- extend_projection(fit, proj_years = stop.year - start.year)
+fit <- lapply(fit, extend_projection, proj_years = stop.year - start.year)
 
 ## The function aggr_specfit() involves simulating the model for all resamples in each 
 ## subregion and summing the following `pop`, `hivpop`, and `artpop` arrays for each of 
 ## the 3000 resamples to generate 3000 national outputs.
 ## TODO: Why 3000 simulations? Why did it extend 50 yrs? How to sample just one draw? Difference between this, tidy-outputs, and gbd.simfit?
+
 result <- aggr_specfit(fit)
-output <- tidy_output(fit[[loc]], "rhybrid")
+output <- tidy_output(fit[[1]], "rhybrid")
 
 prevdata <- data.table(output$ageprevdat)
 prevdata <- prevdata[,.(type = 'point', mean = prev, upper = prev + (1.96 * se), lower = prev - (1.96 * se), year, agegr3 = agegr, sex)]
@@ -83,6 +88,7 @@ ageprev.dt <- ageprev.dt[,.(type = 'line', mean, upper, lower, year, sex, agegr3
 if(!'15-49' %in% prevdata$agegr3){
   ageprev.dt <- rbind(ageprev.dt, prevdata, use.names = T)
 }
+
 pdf('/homes/tahvif/eppasm_MWI_fitincrr_granulardata_age_prev.pdf', height = 10, width = 12)
 ggplot() +
   geom_line(data = ageprev.dt[type == 'line'], aes(x = year, y = mean, colour = as.factor(sex))) +
