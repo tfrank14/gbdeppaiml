@@ -24,7 +24,7 @@ prepare_eppd_ind <- function(loc, proj.end=2019, anc.sub = FALSE){
   return(eppd)
 }
 
-ind.prepare.epp.fit <- function(filepath, proj.end=2016.5, sub.anc = F, sub.art.cov = F){
+ind.prepare.epp.fit <- function(filepath, proj.end=2016.5, anc.sub = F, sub.art.cov = F){
   loc_id <- loc.table[ihme_loc_id == loc, location_id]
   
   ## Paths
