@@ -17,7 +17,7 @@ if(length(args) > 0) {
 	i <- as.integer(Sys.getenv("SGE_TASK_ID"))
 } else {
 	run.name <- "181126_test"
-	loc <- "SDN"
+	loc <- "IND_4844"
 	proj.end <- 2019
 	i <- 1
 }
@@ -48,6 +48,8 @@ pdf.path <- paste0(out.dir, "/test_results", i, ".pdf")
 
 ### Functions
 library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
+setwd(paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/eppasm/"))
+devtools::load_all()
 setwd(code.dir)
 devtools::load_all()
 
@@ -63,7 +65,7 @@ dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub,
 ## Fit model
 
 fit <- list() 
-fit[[1]] <- fitmod(dt, eppmod = 'rhybrid', fitincrr = 'linincrr', rw_start = 2010,B0=1e3, B=1e2, opt_iter=1:2*5, number_k = 5,ageprev="binom")
+fit[[1]] <- fitmod(dt, eppmod = 'rhybrid', rw_start = 2010,B0=1e3, B=1e2, opt_iter=1:2*5, number_k = 5)
 
 
 ## When fitting, the random-walk based models only simulate through the end of the

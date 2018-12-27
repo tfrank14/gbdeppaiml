@@ -127,6 +127,7 @@ create_hivproj_param <- function(loc, start.year = 1970, stop.year = 2019){
   proj.years = yr_start:yr_end
 
   ## TODO: Get these fertility and incrr adjustments by country from Jeff
+  print('Warning: Still reading in placeholders from other location for some parameters')
   pjnz <- find_pjnz('MWI')[[1]]
   temp.projp <- read_hivproj_param(pjnz, use_ep5=FALSE)
   relinfectART <- 0.15

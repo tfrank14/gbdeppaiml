@@ -10,7 +10,7 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
     ## Unfortunately currently necessary to read PJNZ here to sub directly into demp and then call create_spectrum_fixpar
    if(grepl('IND', loc)){
      demp <- create_spectrum_demog_param(loc, start.year, stop.year)
-     projp <- create_hivproj_param(loc, i, start.year, stop.year)
+     projp <- create_hivproj_param(loc, start.year, stop.year)
    } else{
      pjnz <- find_pjnz(loc)[[1]]
      demp <- read_specdp_demog_param(pjnz, use_ep5=FALSE)

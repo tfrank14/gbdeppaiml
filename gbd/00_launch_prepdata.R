@@ -21,11 +21,10 @@ loc.table <- data.table(get_locations(hiv_metadata = T))
 
 ### Code
 epp.list <- sort(loc.table[epp == 1, ihme_loc_id])
-loc.list <- epp.list[-grep("IND", epp.list)]
-ind.list <- epp.list[grep("IND", epp.list)]
+loc.list <- epp.list
 
 ## Launch prepare locations file
-for(loc in ind.list) {
+for(loc in loc.list) {
     prep.files.string <- paste0("qsub -pe multi_slot 1 -P ", cluster.project, " ", 
                          "-e /share/temp/sgeoutput/", user, "/errors ",
                          "-o /share/temp/sgeoutput/", user, "/output ",
