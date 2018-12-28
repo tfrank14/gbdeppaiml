@@ -11,11 +11,16 @@ prepare_spec_object <- function(loc, popadjust = TRUE, popupdate=TRUE, use_ep5=F
     zaf.dict <- list("MP" = "ZAF_487", "GP" = "ZAF_484", "KZN" = "ZAF_485", 
                      "WC" = "ZAF_490", "EC" = "ZAF_482", "LP" = "ZAF_486", 
                      "FS" = "ZAF_483", "NW" = "ZAF_488", "NC" = "ZAF_489")
-    eppd.new <- list()
-    eppd.new[[loc]] <- eppd[[names(which(zaf.dict == loc))]]  
-    eppd <- eppd.new
-    eppd[[1]]$ancrtcens <- data.frame(year=integer(), prev=integer(), n=integer())
-    # eppd.tot[[subpop.tot]]$ancrtcens <- NULL
+    eppd.new <- eppd[[names(which(zaf.dict == loc))]]  
+    attr(eppd.new, 'country') <- attr(eppd, 'country')
+    attr(eppd.new, 'country_code') <- attr(eppd, 'country_code')
+    attr(eppd.new, 'class') <- attr(eppd, 'class')
+    eppd.new$ancrtcens <- data.frame(year=integer(), prev=integer(), n=integer())
+    eppd <- list()
+    eppd[[loc]] <- eppd.new
+    ## Just need this for epidemic start
+    epp.totals <- list()
+    epp.totals$epp.input.tot <- epp::read_epp_input(pjnz)
   } else{
     epp.totals <- collapse_epp(loc)
     eppd <- epp.totals$eppd
@@ -58,8 +63,6 @@ prepare_spec_object <- function(loc, popadjust = TRUE, popupdate=TRUE, use_ep5=F
   attr(val, 'specfp') <- specfp
   attr(val, 'country') <- read_country(pjnz)
   attr(val, 'region') <- loc
-  #saveRDS(val, paste0('/share/hiv/data/PJNZ_EPPASM_prepped/', loc, '.rds'))
-  
   return(val)
 }
 
