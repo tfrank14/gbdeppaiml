@@ -4,8 +4,12 @@ prepare_eppd_ind <- function(loc, proj.end=2019, anc.sub = FALSE){
   unaids.year <- loc.table[ihme_loc_id == loc, unaids_recent]
   dir <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/UNAIDS_country_data/", unaids.year, "/",loc, "/")        
   filepath <- paste0(dir, loc)
-  eppd <- ind.prepare.epp.fit(filepath, proj.end = proj.end)
-  
+  eppd <- ind.prepare.epp.fit(filepath, proj.end = proj.end, anc.sub = FALSE)
+  # gen.pop.dict <- c("General Population", "General population", "GP", "GENERAL POPULATION", "GEN. POPL.", "General population(Low Risk)", "Remaining Pop")
+  # gen.pop.i <- which(names(eppd) %in% gen.pop.dict)
+  # temp.eppd <- list()
+  # temp.eppd[['General Population']] <- eppd[[gen.pop.i]]
+  # eppd <- temp.eppd
   ## melt site-level data
   eppd <- Map("[[<-", eppd, "ancsitedat", lapply(eppd, melt_ancsite_data))
   
@@ -24,7 +28,7 @@ prepare_eppd_ind <- function(loc, proj.end=2019, anc.sub = FALSE){
   return(eppd)
 }
 
-ind.prepare.epp.fit <- function(filepath, proj.end=2016.5, sub.anc = F, sub.art.cov = F){
+ind.prepare.epp.fit <- function(filepath, proj.end=2016.5, anc.sub = T, sub.art.cov = F){
   loc_id <- loc.table[ihme_loc_id == loc, location_id]
   
   ## Paths
@@ -44,6 +48,7 @@ ind.prepare.epp.fit <- function(filepath, proj.end=2016.5, sub.anc = F, sub.art.
   
   ## epp
   eppd <- ind.read.epp.data(paste(filepath, ".xml", sep=""))
+  ##TODO - fix ANC subbing - there is currently an issue when merging together anc.prev, anc.n, and anc.used the melt_ancsite_data function
   if(anc.sub) {
     ## Prevalence
     # Prep ANC prevalence data for insertion
@@ -90,6 +95,11 @@ ind.prepare.epp.fit <- function(filepath, proj.end=2016.5, sub.anc = F, sub.art.
         ## add used index
         eppd[[sub.pop]]$anc.used <- rep(TRUE, nrow(eppd[[sub.pop]]$anc.n))
       }
+    }
+  }
+  for(subp in names(eppd)){
+    if(length(eppd[[subp]]$anc.used)!= nrow(eppd[[subp]]$anc.prev)){
+      eppd[[subp]]$anc.used <- rep(TRUE, nrow(eppd[[subp]]$anc.prev))
     }
   }
   
