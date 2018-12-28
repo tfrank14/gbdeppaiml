@@ -21,7 +21,6 @@ find_pjnz <- function(loc){
   if(file.exists(dir)) {
     pjnz.list <- list.files(dir, pattern = "PJNZ", full.names = T)
     file.list <- grep(temp.loc, pjnz.list, value = T)
-    if(loc == "NGA") file.list <- c()
   } else {
     one.up <- paste(head(unlist(tstrsplit(dir, "/")), -1), collapse = "/")
     dir.list <- list.files(one.up, pattern = loc, full.names = T)
@@ -31,6 +30,12 @@ find_pjnz <- function(loc){
   }
   if(length(file.list) == 0) {
     loc.name <- loc.table[ihme_loc_id == temp.loc, location_name]
+    if(grepl('NGA_', loc)){
+      loc.name <- paste0('Nigeria_', loc.name)
+    }
+    if(grepl('NER', loc)){
+      loc.name <- 'Niger_2018_final_v5_63'
+    }
     file.list <- grep(loc.name, pjnz.list, value = T)
     if(length(file.list) == 0){
       loc.name <- loc.table[ihme_loc_id == temp.loc, location_name]
@@ -38,6 +43,7 @@ find_pjnz <- function(loc){
       file.list <- grep(loc.name, pjnz.list, value = T)     
     }
   }
+  
   print(file.list)
   return(file.list)
 }
