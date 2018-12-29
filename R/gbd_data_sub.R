@@ -159,7 +159,6 @@ sub.prev <- function(loc, dt){
   } else {
     gen.pop.i <- which(names(dt) %in% gen.pop.dict)
   }
-  ## TODO: Where are prev surveys compiled?
   surv.path <- paste0("/ihme/hiv/epp_output/gbd19/", run.name, "/prev_surveys.csv")
   data4 <- fread(surv.path)[iso3 == loc]
   data4[,c("iso3", "int_year", "nid") := NULL]
@@ -171,7 +170,7 @@ sub.prev <- function(loc, dt){
     data4[,v.hhs:=2*pi*exp(W.hhs^2)*se^2]
     data4[,sd.W.hhs := sqrt(v.hhs)]
     ## TODO: Correct index?
-    data4[,idx := year - (attr(dt[[loc]], 'eppfp')$tsEpidemicStart-1.5)]
+    data4[,idx := year - (attr(dt, 'specfp')$ss$time_epi_start-1.5)]
     data4[, agegr := '15-49']
     data4[, sex := 'both']
     data4[, deff := 2]
@@ -179,7 +178,7 @@ sub.prev <- function(loc, dt){
     ## TODO: Fix ZAF
     if(grepl("ZAF", loc)) {
       drop.years <- unique(c(data4$year,data4$year+1,data4$year-1))
-      data4 <- rbind(data4,attr(dt[[1]], 'likdat')$hhslik.dat[! attr(dt[[1]], 'likdat')$hhslik.dat$year %in% drop.years, ])
+      data4 <- rbind(data4,attr(dt, 'eppd')$hhs[! attr(dt, 'eppd')$hhs$year %in% drop.years, ], fill = TRUE)
     } 
     data4 <- data4[order(data4$year),]
     if(!length(dt)){

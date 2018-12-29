@@ -21,7 +21,6 @@ find_pjnz <- function(loc){
   if(file.exists(dir)) {
     pjnz.list <- list.files(dir, pattern = "PJNZ", full.names = T)
     file.list <- grep(temp.loc, pjnz.list, value = T)
-    if(loc == "NGA") file.list <- c()
   } else {
     one.up <- paste(head(unlist(tstrsplit(dir, "/")), -1), collapse = "/")
     dir.list <- list.files(one.up, pattern = loc, full.names = T)
@@ -36,31 +35,33 @@ find_pjnz <- function(loc){
   if(loc.name=="Plateau"){
     file.list <-  pjnz.list[which(grepl(paste0("Nigeria_", loc.name), pjnz.list))]
   }
+  
+  if(grepl('NGA_', loc)){
+    loc.name <- paste0('Nigeria_', loc.name)
+  }
+  
   if(loc.name=="Niger" | loc.name=="Guinea"| 
      loc.name=="Congo" | loc.name=="Sudan"){
     file.list <-  pjnz.list[which(grepl(paste0("/", loc.name,"_"), pjnz.list))]
   }
   
-  if(temp.loc =="NGA_25344"){
-    loc.name <- 'Nigeria_Niger'
-    file.list <- grep(loc.name, pjnz.list, value = T)    
-  }
-  
-  if(length(file.list) == 0) {
+ 
+    if(length(file.list) == 0) {
     loc.name <- loc.table[ihme_loc_id == temp.loc, location_name]
     file.list <-  pjnz.list[which(grepl(paste0(loc.name,"_"), pjnz.list))]
     
-    if(length(file.list) == 0) {
+      if(length(file.list) == 0) {
       file.list <- grep(loc.name, pjnz.list, value = T)
-    }
+      }
     
-    if(length(file.list) == 0){
-      loc.name <- loc.table[ihme_loc_id == temp.loc, location_name]
-      loc.name <- gsub(" ", "", gsub("[^[:alnum:] ]", "", loc.name))
-      file.list <- grep(loc.name, pjnz.list, value = T)     
+        if(length(file.list) == 0){
+          loc.name <- loc.table[ihme_loc_id == temp.loc, location_name]
+          loc.name <- gsub(" ", "", gsub("[^[:alnum:] ]", "", loc.name))
+          file.list <- grep(loc.name, pjnz.list, value = T)     
     }
     
   }
+  
   print(file.list)
   return(file.list)
 }
