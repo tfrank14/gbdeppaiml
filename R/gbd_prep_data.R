@@ -1,26 +1,31 @@
 find_pjnz <- function(loc){
   if(grepl("KEN", loc) & loc.table[ihme_loc_id == loc, level] == 5) {
-      if(loc.table[ihme_loc_id == loc, parent_id] == 44797) {
-          temp.loc <- "KEN_44795" # This is because the North Eastern province doesn't have an XML file
-      } else {
-          temp.loc <- loc.table[location_id == loc.table[ihme_loc_id == loc, parent_id], ihme_loc_id]
-      }
+    if(loc.table[ihme_loc_id == loc, parent_id] == 44797) {
+      temp.loc <- "KEN_44795" # This is because the North Eastern province doesn't have an XML file
+    } else {
+      temp.loc <- loc.table[location_id == loc.table[ihme_loc_id == loc, parent_id], ihme_loc_id]
+    }
   } else if(grepl('ZAF', loc)){
     temp.loc <- 'ZAF'
-    } else {
-      temp.loc <- loc
-  }
+  } else {
+    temp.loc <- loc
+  } 
+  
+  
+  loc.name <- loc.table[ihme_loc_id == temp.loc, location_name]
+  
   unaids.year <- loc.table[ihme_loc_id == temp.loc, unaids_recent]
   ## TODO: What is wrong with the 2018 ZAF file?
   if(grepl('ZAF', loc)){unaids.year = 2017}
   if(unaids.year %in% 2017:2018) {
-      dir <- paste0("/home/j/WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/UNAIDS_country_data/", unaids.year, "/")
+    dir <- paste0("/home/j/WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/UNAIDS_country_data/", unaids.year, "/")
   } else {
-      dir <- paste0("/home/j/WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/UNAIDS_country_data/", unaids.year, "/", temp.loc, "/")        
+    dir <- paste0("/home/j/WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/UNAIDS_country_data/", unaids.year, "/", temp.loc, "/")        
   }
   if(file.exists(dir)) {
     pjnz.list <- list.files(dir, pattern = "PJNZ", full.names = T)
     file.list <- grep(temp.loc, pjnz.list, value = T)
+    if(loc == "NGA") file.list <- c()
   } else {
     one.up <- paste(head(unlist(tstrsplit(dir, "/")), -1), collapse = "/")
     dir.list <- list.files(one.up, pattern = loc, full.names = T)
@@ -35,32 +40,34 @@ find_pjnz <- function(loc){
   if(loc.name=="Plateau"){
     file.list <-  pjnz.list[which(grepl(paste0("Nigeria_", loc.name), pjnz.list))]
   }
-  
-  if(grepl('NGA_', loc)){
-    loc.name <- paste0('Nigeria_', loc.name)
-  }
-  
   if(loc.name=="Niger" | loc.name=="Guinea"| 
      loc.name=="Congo" | loc.name=="Sudan"){
     file.list <-  pjnz.list[which(grepl(paste0("/", loc.name,"_"), pjnz.list))]
   }
   
- 
-    if(length(file.list) == 0) {
+  if(temp.loc =="NGA_25344"){
+    loc.name <- 'Nigeria_Niger'
+    file.list <- grep(loc.name, pjnz.list, value = T)    
+  }
+  
+  
+  if(length(file.list) == 0) {
     loc.name <- loc.table[ihme_loc_id == temp.loc, location_name]
     file.list <-  pjnz.list[which(grepl(paste0(loc.name,"_"), pjnz.list))]
     
-      if(length(file.list) == 0) {
+    if(length(file.list) == 0) {
       file.list <- grep(loc.name, pjnz.list, value = T)
-      }
+    }
     
-        if(length(file.list) == 0){
-          loc.name <- loc.table[ihme_loc_id == temp.loc, location_name]
-          loc.name <- gsub(" ", "", gsub("[^[:alnum:] ]", "", loc.name))
-          file.list <- grep(loc.name, pjnz.list, value = T)     
+    if(length(file.list) == 0){
+      loc.name <- loc.table[ihme_loc_id == temp.loc, location_name]
+      loc.name <- gsub(" ", "", gsub("[^[:alnum:] ]", "", loc.name))
+      file.list <- grep(loc.name, pjnz.list, value = T)     
     }
     
   }
+  
+  
   
   print(file.list)
   return(file.list)
