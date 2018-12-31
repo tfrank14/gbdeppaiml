@@ -50,11 +50,16 @@ find_pjnz <- function(loc){
     file.list <- grep(loc.name, pjnz.list, value = T)    
   }
   
+  if(temp.loc =="NGA_25332"){
+    loc.name <- 'FCT_Abuja'
+    file.list <- grep(loc.name, pjnz.list, value = T)    
+  }
+  
   
   if(length(file.list) == 0) {
     loc.name <- loc.table[ihme_loc_id == temp.loc, location_name]
     file.list <-  pjnz.list[which(grepl(paste0(loc.name,"_"), pjnz.list))]
-    
+
     if(length(file.list) == 0) {
       file.list <- grep(loc.name, pjnz.list, value = T)
     }
