@@ -362,7 +362,7 @@ sub.cd4.prog <- function(dt, loc, k){
   return(dt)
 }
 
-sub.anc <- function(loc, dt) {
+sub.anc <- function(loc, dt, i) {
   # Make adjustments to ANC coming from PJNZ files ** add more **
   ## Prep EPP data
   # Choose subpopulation for substitution
@@ -372,7 +372,15 @@ sub.anc <- function(loc, dt) {
   } else {
     gen.pop <- 1
   }
-  eppd <- attr(dt[[gen.pop]], "eppd")
+ 
+  if(!length(dt)){
+    eppd <- attr(dt, "eppd")
+  } else{
+    eppd <- attr(dt[[gen.pop]], "eppd")
+  }
+  
+  
+  
   if(grepl("ZAF", loc) | grepl("SWZ", loc)) {
     # Collapse up to single provincial ANC site
     # Extract first year of data and use that site as provincial site
@@ -428,7 +436,13 @@ sub.anc <- function(loc, dt) {
   }
 
   # Reformat EPP object with updated data
-  attr(dt[[gen.pop]], "eppd") <- eppd
+  if(!length(dt)){
+    attr(dt, "eppd") <- eppd
+  } else{
+    attr(dt[[gen.pop]], "eppd") <- eppd
+  }
+  
+  
 
   set.list.attr <- function(obj, attrib, value.lst)
     mapply(function(set, value){ attributes(set)[[attrib]] <- value; set}, obj, value.lst)
