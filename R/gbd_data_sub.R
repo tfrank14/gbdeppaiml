@@ -443,10 +443,15 @@ sub.anc <- function(loc, dt, i) {
   }
   
   
-
   set.list.attr <- function(obj, attrib, value.lst)
-    mapply(function(set, value){ attributes(set)[[attrib]] <- value; set}, obj, value.lst)
-  attr(dt[[gen.pop]], "likdat") <- epp::fnCreateLikDat(eppd, anchor.year = floor(attr(dt[[gen.pop]], "eppfp")$proj.steps[1]))
+  mapply(function(set, value){ attributes(set)[[attrib]] <- value; set}, 
+         obj, value.lst)
+
+  if(!length(dt)){
+    attr(dt, "likdat") <- epp::fnCreateLikDat(eppd, anchor.year = floor(attr(dt, "specfp")$proj.steps[1]))
+  } else{
+    attr(dt[[gen.pop]], "likdat") <- epp::fnCreateLikDat(eppd, anchor.year = floor(attr(dt[[gen.pop]], "specfp")$proj.steps[1]))
+  }
 
   return(dt)
 }
