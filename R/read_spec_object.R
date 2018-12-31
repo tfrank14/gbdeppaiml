@@ -44,7 +44,7 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
   
   if(anc.backcast) {
     print("Substituting ANC backcast output")
-    dt <- sub.anc(loc, dt)
+    dt <- sub.anc(loc, dt, i)
   }
   
   return(dt)
