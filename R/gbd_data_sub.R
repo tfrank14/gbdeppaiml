@@ -417,31 +417,35 @@ sub.anc <- function(loc, dt, i) {
       if (length(list.files(anc.path))==0){
         recent <- sort(as.integer(list.files(anc.dir)), decreasing=TRUE)[2]
         anc.path <- paste0(anc.dir, recent, "/data/", loc, ".csv")
+   
       }
+    
+    if(length(list.files(anc.path))>0){
 
-
-    anc.dt <- fread(anc.path)
-    anc.dt[, clinic := gsub("[^[:alnum:] ]", "",clinic)] # For differences in naming like added special characters
-    anc.dt <- anc.dt[order(clinic)]
+      anc.dt <- fread(anc.path)
+      anc.dt[, clinic := gsub("[^[:alnum:] ]", "",clinic)] # For differences in naming like added special characters
+      anc.dt <- anc.dt[order(clinic)]
     # Add draw level data from ANC backcast
-    for(cl in unique(anc.dt$clinic)) {
-      clinic.idx <- which(grepl(gsub(" ", "", cl),gsub(" ", "",  rownames(eppd$anc.prev))))
-      sub.dt <- anc.dt[clinic == cl]
-      sub.dt[pred == "Data", (paste0("draw_", i)) := mean]
-      for(y in unique(anc.dt[pred == "Data"]$year_id)) {
-        eppd$anc.prev[clinic.idx, as.character(y)] <- sub.dt[year_id == y, get(paste0("draw_", i))]
-        eppd$anc.n[clinic.idx, as.character(y)] <- sub.dt[year_id == y, n]
+        for(cl in unique(anc.dt$clinic)) {
+          clinic.idx <- which(grepl(gsub(" ", "", cl),gsub(" ", "",  rownames(eppd$anc.prev))))
+          sub.dt <- anc.dt[clinic == cl]
+          sub.dt[pred == "Data", (paste0("draw_", i)) := mean]
+            for(y in unique(anc.dt[pred == "Data"]$year_id)) {
+              eppd$anc.prev[clinic.idx, as.character(y)] <- sub.dt[year_id == y, get(paste0("draw_", i))]
+              eppd$anc.n[clinic.idx, as.character(y)] <- sub.dt[year_id == y, n]
+            }
+        }
+   
+
+  # Reformat EPP object with updated data
+    if(!length(dt)){
+    attr(dt, "eppd") <- eppd
+      } else{
+    attr(dt[[gen.pop]], "eppd") <- eppd
       }
     }
   }
 
-  # Reformat EPP object with updated data
-  if(!length(dt)){
-    attr(dt, "eppd") <- eppd
-  } else{
-    attr(dt[[gen.pop]], "eppd") <- eppd
-  }
-  
   
   set.list.attr <- function(obj, attrib, value.lst)
   mapply(function(set, value){ attributes(set)[[attrib]] <- value; set}, 
@@ -451,6 +455,10 @@ sub.anc <- function(loc, dt, i) {
     attr(dt, "likdat") <- epp::fnCreateLikDat(eppd, anchor.year = floor(attr(dt, "specfp")$proj.steps[1]))
   } else{
     attr(dt[[gen.pop]], "likdat") <- epp::fnCreateLikDat(eppd, anchor.year = floor(attr(dt[[gen.pop]], "specfp")$proj.steps[1]))
+  }
+  
+  if(!length(list.files(anc.path))){
+    print("No backcast data")
   }
 
   return(dt)
