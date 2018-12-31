@@ -379,8 +379,7 @@ sub.anc <- function(loc, dt, i) {
     eppd <- attr(dt[[gen.pop]], "eppd")
   }
   
-  
-  
+
   if(grepl("ZAF", loc) | grepl("SWZ", loc)) {
     # Collapse up to single provincial ANC site
     # Extract first year of data and use that site as provincial site
@@ -420,7 +419,7 @@ sub.anc <- function(loc, dt, i) {
    
       }
     
-    if(length(list.files(anc.path))>0){
+    if(file.exists(anc.path)){
 
       anc.dt <- fread(anc.path)
       anc.dt[, clinic := gsub("[^[:alnum:] ]", "",clinic)] # For differences in naming like added special characters
@@ -457,7 +456,7 @@ sub.anc <- function(loc, dt, i) {
     attr(dt[[gen.pop]], "likdat") <- epp::fnCreateLikDat(eppd, anchor.year = floor(attr(dt[[gen.pop]], "specfp")$proj.steps[1]))
   }
   
-  if(!length(list.files(anc.path))){
+  if(!file.exists(anc.path)){
     print("No backcast data")
   }
 
