@@ -34,6 +34,7 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
   
   ## ANC data
   if(anc.sub){
+  print("ANC substitution")
   high.risk.list <- loc.table[epp == 1 & collapse_subpop == 0 & !grepl("ZAF", ihme_loc_id) & !grepl("KEN", ihme_loc_id), ihme_loc_id]
   ken.anc.path <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/data/prepped/kenya_anc_map.csv")
   ken.anc <- fread(ken.anc.path)
