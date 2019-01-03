@@ -17,13 +17,13 @@ if(length(args) > 0) {
 }
 
 ### Paths
-out.dir <- paste0("/ihme/hiv/epp_output/gbd17/", run.name, "/")
+out.dir <- paste0("/ihme/hiv/epp_input/gbd19/", run.name, "/")
 dir.create(out.dir, showWarnings = F)
 out.path <- paste0(out.dir, "prev_surveys.csv")
 supp.survey.path <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/supplement_survey_data_2017.csv")
 
 ### Functions
-source(paste0(root, "Project/Mortality/shared/functions/get_locations.r"))
+library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
 
 ### Tables
 loc.table <- data.table(get_locations(hiv_metadata = T))

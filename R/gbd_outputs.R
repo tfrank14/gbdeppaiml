@@ -136,7 +136,7 @@ get_daly_hivpop <- function(hivpop1){
 get_summary <- function(output){
   output[, hivpop := pop_art + pop_gt350 + pop_200to350 + pop_lt200]
   output[,c('pop_gt350', 'pop_200to350', 'pop_lt200', 'birth_prev', 'pop_neg', 'pregprev', 'hiv_births', 'total_births') := NULL]
-  output.count <- melt(output, id.vars = c('age', 'sex', 'year', 'pop'))
+  output.count <- melt(output, id.vars = c('age', 'sex', 'year', 'pop', 'run_num'))
   
   ##TODO: Write out age map in launch script
   age.map <- get_age_map()
@@ -146,15 +146,15 @@ get_summary <- function(output){
   output.count[, age := NULL]
   
   # Collapse to both sex
-  both.sex.dt <- output.count[,.(value = sum(value), pop = sum(pop)), by = c('year', 'variable', 'age_group_id')]
+  both.sex.dt <- output.count[,.(value = sum(value), pop = sum(pop)), by = c('year', 'variable', 'age_group_id', 'run_num')]
   both.sex.dt[, sex := 'both']
   all.sex.dt <- rbind(output.count, both.sex.dt)
   
   # Collapse to all-ages and adults
-  all.age.dt <- all.sex.dt[,.(value = sum(value), pop = sum(pop)), by = c('year', 'variable', 'sex')]
+  all.age.dt <- all.sex.dt[,.(value = sum(value), pop = sum(pop)), by = c('year', 'variable', 'sex','run_num')]
   all.age.dt[, age_group_id := 22]
   
-  adult.dt <- all.sex.dt[age_group_id %in% 8:14, .(value = sum(value), pop = sum(pop)), by = c('year', 'variable', 'sex')]
+  adult.dt <- all.sex.dt[age_group_id %in% 8:14, .(value = sum(value), pop = sum(pop)), by = c('year', 'variable', 'sex', 'run_num')]
   adult.dt[, age_group_id := 24]
   
   age.dt <- rbindlist(list(all.sex.dt, all.age.dt, adult.dt), use.names = T)
@@ -165,7 +165,7 @@ get_summary <- function(output){
   art.pop[, pop := NULL]
   setnames(art.pop, 'value', 'pop')
   art.pop[, variable := 'pop_art']
-  art.merge <- merge(art.pop, output.rate[variable == 'pop_art',.(age_group_id, sex, year, variable, value)], by = c('age_group_id', 'sex', 'year', 'variable'))
+  art.merge <- merge(art.pop, output.rate[variable == 'pop_art',.(age_group_id, sex, year, variable, value, run_num)], by = c('age_group_id', 'sex', 'year', 'variable', 'run_num'))
   output.rate <- output.rate[!variable == 'pop_art']
   output.rate <- rbind(output.rate, art.merge, use.names = T)
   output.rate[, rate := ifelse(pop == 0, 0, value/pop)]
@@ -183,6 +183,20 @@ get_summary <- function(output){
   out.dt[variable == 'hivpop', variable := 'Prevalence']
   setnames(out.dt, 'variable', 'measure')
   age.map <- rbind(age.map[,.(age_group_id, age_group_name_short)], data.table(age_group_id = 24, age_group_name_short = '15 to 49'))
-  out.dt <- merge(out.dt, age.map, by = 'age_group_id')
+  out.dt <- merge(out.dt, age.map[,.(age_group_id, age = age_group_name_short)], by = 'age_group_id')
+  out.dt <- out.dt[,.(mean = mean(value), lower = quantile(value, 0.025), upper = quantile(value, 0.975)), by = c('age_group_id', 'sex', 'year', 'measure', 'metric', 'age')]
   return(out.dt)
   }
+
+## Get data from eppd object, save for future plotting
+save_data <- function(loc, eppd, run.name){
+  prevdata <- data.table(eppd$hhs)
+  prevdata <- prevdata[,.(sex, agegr, type = 'point', model = 'Household Survey', indicator = 'Prevalence', mean = prev, upper = prev + (1.96 * se), lower = ifelse(prev - (1.96 * se) < 0, 0, prev - (1.96 * se)), year)]
+  ancdata <- data.table(eppd$ancsitedat)
+  ancdata <- ancdata[,.(sex = 'female', agegr, type = 'point', model = 'ANC Site', indicator = 'Prevalence', mean = prev, upper = NA, lower = NA, year)]
+  output <- rbind(prevdata, ancdata)
+  path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
+  dir.create(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/'), recursive = TRUE, showWarnings = FALSE)
+  write.csv(output, path, row.names = F)
+  return(output)
+}

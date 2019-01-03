@@ -3,21 +3,23 @@ rm(list=ls())
 windows <- Sys.info()[1][["sysname"]]=="Windows"
 root <- ifelse(windows,"J:/","/home/j/")
 user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
-code.dir <- paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/eppasm-1/")
+code.dir <- paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/gbdeppaiml/")
 date <- substr(gsub("-","",Sys.Date()),3,8)
 
 ## Packages
 library(data.table)
 
 ## Arguments
-run.name <- "181126_test"
+run.name <- "190102_test2"
 proj.end <- 2019
-n.draws <- 1
+n.draws <- 10
 cluster.project <- "proj_hiv"
 
 ### Paths
+input.dir <- paste0("/ihme/hiv/epp_input/gbd19/", run.name, "/")
+dir.create(input.dir, recursive = TRUE, showWarnings = FALSE)
 dir <- paste0("/ihme/hiv/epp_output/gbd19/", run.name, "/")
-dir.create(dir, showWarnings = F)
+dir.create(dir, showWarnings = FALSE)
 
 ### Functions
 library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
@@ -30,23 +32,23 @@ epp.list <- sort(loc.table[epp == 1, ihme_loc_id])
 loc.list <- epp.list
 
 # Cache inputs
-if(!file.exists(paste0(dir, "populations/"))) {
+if(!file.exists(paste0(input.dir, "population/"))) {
   prep.job <- paste0("qsub -N eppasm_prep_inputs_", run.name," -P ",cluster.project," -pe multi_slot 5 ",
                       "-e /share/temp/sgeoutput/", user, "/errors ",
                       "-o /share/temp/sgeoutput/", user, "/output ",
-                      "/homes/", user, "/HIV/singR_shell.sh ", 
-                      code.dir, "R/gbd_prep_inputs.R"," ",run.name," ",proj.end)
+                      code.dir, "gbd/singR_shell.sh ",
+                      code.dir, "gbd/gbd_prep_inputs.R"," ",run.name," ",proj.end)
   print(prep.job)
   system(prep.job)
 }
 
 # Cache prevalence surveys
-if(!file.exists(paste0(dir, 'prev_surveys.csv'))){
+if(!file.exists(paste0(input.dir, 'prev_surveys.csv'))){
   prev.job <- paste0("qsub -N eppasm_prev_cache_", run.name," -P ",cluster.project," -pe multi_slot 2 ",
                      "-e /share/temp/sgeoutput/", user, "/errors ",
                      "-o /share/temp/sgeoutput/", user, "/output ",
-                     "/homes/", user, "/HIV/singR_shell.sh ", 
-                     code.dir, "R/cache_prev_surveys.R"," ",run.name)
+                     code.dir, "gbd/singR_shell.sh ", 
+                     code.dir, "gbd/cache_prev_surveys.R"," ",run.name)
   print(prev.job)
   system(prev.job)
 }
@@ -57,29 +59,56 @@ if(!file.exists(paste0(dir, 'prev_surveys.csv'))){
 
 ## Launch EPP
 for(loc in loc.list) {
+    ## Run EPPASM
     epp.string <- paste0("qsub -P ", cluster.project, " -pe multi_slot 1 ", 
                          "-e /share/temp/sgeoutput/", user, "/errors ",
                          "-o /share/temp/sgeoutput/", user, "/output ",
-                         "-N ", loc, "_epp ",
+                         "-N ", loc, "_eppasm ",
                          "-t 1:", n.draws, " ",
-                         "/homes/", user, "/HIV/singR_shell.sh ", 
+                         "-hold_jid eppasm_prep_inputs_", run.name," ",
+                         code.dir, "gbd/singR_shell.sh ", 
                          code.dir, "gbd/main.R ",
                          run.name, " ", loc, " ", proj.end)
     print(epp.string)
     system(epp.string)
         
-    # Draw compilation
-    # draw.string <- paste0("qsub -P ", cluster.project, " -pe multi_slot 2 ", 
-    #                       "-e /share/temp/sgeoutput/", user, "/errors ",
-    #                       "-o /share/temp/sgeoutput/", user, "/output ",
-    #                       "-N ", loc, "_save_draws ",
-    #                       "-hold_jid ", loc, "_epp ",
-    #                       code.dir, "shell_R.sh ",
-    #                       code.dir, "epp-feature-reset/gbd/save_paired_draws.R ",
-    #                       loc, " ", run.name, " ", n.draws)
-    # print(draw.string)
-    # system(draw.string)
+    ## Draw compilation
+    draw.string <- paste0("qsub -P ", cluster.project, " -pe multi_slot 2 ",
+                          "-e /share/temp/sgeoutput/", user, "/errors ",
+                          "-o /share/temp/sgeoutput/", user, "/output ",
+                          "-N ", loc, "_save_draws ",
+                          "-hold_jid ", loc, "_eppasm ",
+                          code.dir, "gbd/singR_shell.sh ", 
+                          code.dir, "gbd/compile_draws.R ",
+                          run.name, " ", loc, ' ', n.draws, ' TRUE')
+    print(draw.string)
+    system(draw.string)
+    
+    ## Create aggregate and age-specific plots
+    plot.string <- paste0("qsub -P ", cluster.project, " -pe multi_slot 2 ",
+                          "-e /share/temp/sgeoutput/", user, "/errors ",
+                          "-o /share/temp/sgeoutput/", user, "/output ",
+                          "-N ", loc, "_plot_eppasm ",
+                          "-hold_jid ", loc, "_save_draws ",
+                          code.dir, "gbd/singR_shell.sh ", 
+                          code.dir, "gbd/main_plot_output.R ",
+                          loc, " ", run.name)
+    print(plot.string)
+    system(plot.string)
 }
+
+## Compile plots
+  plot.holds <- paste0(loc.list, '_plot_eppasm')
+  plot.string <- paste0("qsub -P ", cluster.project, " -pe multi_slot 1 ",
+                        "-e /share/temp/sgeoutput/", user, "/errors ",
+                        "-o /share/temp/sgeoutput/", user, "/output ",
+                        "-N ", "compile_plots_eppasm ",
+                        "-hold_jid ", plot.holds, " ",
+                        code.dir, "gbd/singR_shell.sh ", 
+                        code.dir, "gbd/compile_plots.R ",
+                        run.name)
+  print(plot.string)
+  system(plot.string)
 
 # ## Check for which draws are missing
 # dir <- paste0("/ihme/hiv/epp_output/gbd17/", run.name, "/")

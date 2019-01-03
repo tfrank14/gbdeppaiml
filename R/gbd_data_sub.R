@@ -16,7 +16,7 @@ extend.years <- function(dt, years){
 }
 
 sub.pop.params.demp <- function(demp, loc, k){
-  dir <- paste0('/share/hiv/epp_output/gbd19/', run.name, '/')
+  dir <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/')
 
   ## Population
   years <- dimnames(demp$basepop)[[3]]
@@ -103,7 +103,7 @@ sub.pop.params.demp <- function(demp, loc, k){
 sub.pop.params.epp <- function(epp.subp, epp.input, loc) {
   ## Load central functions
   years <- epp.subp[[1]]$year
-  dir <- paste0('/share/hiv/epp_output/gbd19/', run.name, '/')
+  dir <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/')
   # add in missing years in the future
   in.pop <- fread(paste0(dir, '/population/', loc, '.csv'))
   max.pop <- copy(in.pop[year_id == max(year_id)])
@@ -159,7 +159,7 @@ sub.prev <- function(loc, dt){
   } else {
     gen.pop.i <- which(names(dt) %in% gen.pop.dict)
   }
-  surv.path <- paste0("/ihme/hiv/epp_output/gbd19/", run.name, "/prev_surveys.csv")
+  surv.path <- paste0("/ihme/hiv/epp_input/gbd19/", run.name, "/prev_surveys.csv")
   data4 <- fread(surv.path)[iso3 == loc]
   data4[,c("iso3", "int_year", "nid") := NULL]
   
@@ -193,11 +193,11 @@ sub.prev <- function(loc, dt){
 }
 
 sub.prev.granular <- function(dt, loc){
+  ## TODO: Add this to cache prev
   age.prev.dt <- fread('/homes/tahvif/age_prev_surveys.csv')
   age.prev.dt <- age.prev.dt[iso3 == loc]
   age.prev.dt[, agegr := paste0(age_year, '-', age_year+4)]
   age.prev.dt[,sex := ifelse(sex_id == 1, 'male', 'female')]
-  ## TODO: What do these mean
   age.prev.dt[,c('used','deff', 'deff_approx') := list(TRUE,2, 2)]
   age.prev.dt <- age.prev.dt[,.(year, sex, agegr, n, prev, se, used, deff, deff_approx)]
   gen.pop.dict <- c("General Population", "General population", "GP", "GENERAL POPULATION", "GEN. POPL.", "General population(Low Risk)", "Remaining Pop")

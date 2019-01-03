@@ -317,7 +317,7 @@ create_hivproj_param <- function(loc, start.year = 1970, stop.year = 2019){
                                 Sex = c('Male', 'Female'),
                                 Year = paste0(proj.years))
   ## NOTE Using test run directory
-  dir <- paste0('/share/hiv/epp_output/gbd19/181126_test/')
+  dir <- paste0('/share/hiv/epp_input/gbd19/181126_test/')
   pop <- fread(paste0(dir, '/population_single_age/', loc, '.csv'))
   pop <- pop[age_group_id == 14 + 48]
   pop <- pop[,.(year = year_id, sex_id, population)]

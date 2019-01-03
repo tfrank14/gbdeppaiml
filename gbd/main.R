@@ -13,18 +13,17 @@ print(args)
 if(length(args) > 0) {
 	run.name <- args[1]
 	loc <- args[2]
-	proj.end <- as.integer(args[3])
+	stop.year <- as.integer(args[3])
 	i <- as.integer(Sys.getenv("SGE_TASK_ID"))
 } else {
-	run.name <- "181126_test"
-	loc <- "MWI"
-	proj.end <- 2019
+	run.name <- "190102_test2"
+	loc <- "NGA_25344"
+	stop.year <- 2019
 	i <- 1
 }
 
 ### Arguments
 start.year <- 1970
-stop.year <- 2019
 trans.params.sub <- TRUE
 pop.sub <- TRUE
 art.sub <- FALSE
@@ -32,12 +31,8 @@ anc.sub <- FALSE
 prev.sub <- TRUE
 anc.prior <- TRUE
 no.anc <- FALSE
-eq.prior <- TRUE
-anc.backcast <- TRUE
-num.knots <- 7
-popadjust <- NULL
-popupdate <- TRUE
-use_ep5 = FALSE
+anc.backcast <- FALSE
+popadjust <- TRUE
 plot.draw <- TRUE
 
 
@@ -70,12 +65,17 @@ fit <- extend_projection(fit, proj_years = stop.year - start.year)
 
 ## Simulate model for all resamples, choose a random draw, get gbd outputs
 result <- gbd_sim_mod(fit)
-rand.draw <- round(runif(1, min = 1, max = 3000))
-output <- get_gbd_outputs(result[[rand.draw]], attr(dt, 'specfp'))
-if(plot.draw){
-  plot_15to49_draw(loc, output, attr(dt, 'eppd'), run.name)
+data.path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
+if(!file.exists(data.path)){
+  save_data(loc, attr(dt, 'eppd'), run.name)
 }
+rand.draw <- round(runif(1, min = 1, max = 3000))
+output.dt <- get_gbd_outputs(result[[rand.draw]], attr(dt, 'specfp'))
+output.dt[,run_num := i]
 
 ## Write output to csv
 dir.create(out.dir, showWarnings = FALSE)
-write.csv(output, paste0(out.dir, '/', i, '.csv'), row.names = F)
+write.csv(output.dt, paste0(out.dir, '/', i, '.csv'), row.names = F)
+if(plot.draw){
+  plot_15to49_draw(loc, output.dt, attr(dt, 'eppd'), run.name)
+}
