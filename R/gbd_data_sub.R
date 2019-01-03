@@ -214,6 +214,8 @@ sub.prev.granular <- function(dt, loc){
   return(dt)
 }
 
+
+
 sub.off.art <- function(dt, loc, k) {
   # Off-ART Mortality
   mortnoart <- fread(paste0(aim.dir, "transition_parameters/HIVmort_noART/current_draws_combined/",loc,"_mortality_par_draws.csv"))
@@ -419,6 +421,10 @@ sub.anc <- function(loc, dt, i) {
    
       }
     
+    if(!file.exists(anc.path)){
+      print("Note: No backcast data")
+    }
+  
     if(file.exists(anc.path)){
 
       anc.dt <- fread(anc.path)
@@ -445,10 +451,19 @@ sub.anc <- function(loc, dt, i) {
     }
   }
 
-  
+  #str(attr(dt,"eppd")$ancrtsite.prev)
+
   set.list.attr <- function(obj, attrib, value.lst)
   mapply(function(set, value){ attributes(set)[[attrib]] <- value; set}, 
          obj, value.lst)
+  
+  if(!is.null(nrow(eppd$ancrtsite.prev)) ){
+    if(nrow(eppd$ancrtsite.prev)<length(eppd$anc.used)){
+  enter.mat <- matrix(,length(eppd$anc.used)-nrow(eppd$ancrtsite.prev),38,)
+  eppd$ancrtsite.prev = rbind(eppd$ancrtsite.prev,  enter.mat)
+  eppd$ancrtsite.n = rbind(eppd$ancrtsite.n,  enter.mat)
+  }
+}
 
   if(!length(dt)){
     attr(dt, "likdat") <- epp::fnCreateLikDat(eppd, anchor.year = floor(attr(dt, "specfp")$proj.steps[1]))
@@ -456,9 +471,8 @@ sub.anc <- function(loc, dt, i) {
     attr(dt[[gen.pop]], "likdat") <- epp::fnCreateLikDat(eppd, anchor.year = floor(attr(dt[[gen.pop]], "specfp")$proj.steps[1]))
   }
   
-  if(!file.exists(anc.path)){
-    print("No backcast data")
-  }
+  
 
   return(dt)
 }
+
