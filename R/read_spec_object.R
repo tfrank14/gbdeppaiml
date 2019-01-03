@@ -48,8 +48,6 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
     dt <- sub.anc(loc, dt, i)
   }
   
-  return(dt)
-
 } 
   
   ## Transition parameters
