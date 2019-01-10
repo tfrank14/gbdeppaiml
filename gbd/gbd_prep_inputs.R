@@ -16,8 +16,9 @@ if(length(args) > 0) {
 	proj.end <- 2019
 }
 
-out.dir <- paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/")
-dir.create(out.dir, showWarnings = F)
+#out.dir <- paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/")
+out.dir <- paste0('/share/homes/djahag/eppasm-1-trials/', run.name, "/")
+dir.create(out.dir, showWarnings = FALSE)
 
 ## Functions
 library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
