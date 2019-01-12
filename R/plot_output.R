@@ -4,7 +4,6 @@
 #' @param eppd data input to eppasm
 #'
 
-loc = "MWI"; output = output.dt; epp = attr(dt, 'eppd')
 plot_15to49_draw<- function(loc, output, eppd, run.name, compare.run = '180702_numbat_combined', un.comparison = TRUE){
   ## Get data used in fitting model
   ## TODO: call save_data somewhere else
