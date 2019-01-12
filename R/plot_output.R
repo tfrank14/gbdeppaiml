@@ -3,12 +3,15 @@
 #' @param output model output
 #' @param eppd data input to eppasm
 #'
-plot_15to49_draw<- function(loc, output, eppd, run.name, compare.run = '180702_numbat_combined'){
+
+loc = "MWI"; output = output.dt; epp = attr(dt, 'eppd')
+plot_15to49_draw<- function(loc, output, eppd, run.name, compare.run = '180702_numbat_combined', un.comparison = TRUE){
   ## Get data used in fitting model
   ## TODO: call save_data somewhere else
   data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
   data <- data[agegr == '15-49']
   data[, c('agegr', 'sex') := NULL]
+  un.data <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/data/prepped/GBD17_comparison_data.csv")
 
   ## Comparison run
   if(file.exists(paste0('/snfs1/WORK/04_epi/01_database/02_data/hiv/spectrum/summary/', compare.run, '/locations/', loc, '_spectrum_prep.csv'))){
@@ -18,14 +21,32 @@ plot_15to49_draw<- function(loc, output, eppd, run.name, compare.run = '180702_n
   } else{
     compare.dt <- NULL
   }
+  
   cur.dt <- get_summary(output)
   cur.dt <- cur.dt[age_group_id == 24 & sex == 'both' & measure %in% c('Incidence', 'Prevalence') & metric == 'Rate',.(type = 'line', year, indicator = measure, model = run.name, mean, lower = NA, upper = NA)]
   
-  plot.dt <- rbind(data, compare.dt, cur.dt, use.names = T)
-  plot.dt[,model := factor(model)]
-  color.list <- c('blue', 'red')
-  names(color.list) <- c(run.name, ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run))
+  if(un.comparison){
+    if(file.exists(un.data)){
+      compare.dt.unaids <- fread(un.data)
+      compare.dt.unaids <- compare.dt.unaids[age_group_id == 22 & sex_id == 3 & measure %in% c('Incidence', 'Prevalence') & 
+                                             metric == 'Rate' & source=="UNAIDS17" & ihme_loc_id==loc]
+      compare.dt.unaids <- compare.dt.unaids[,.(type = 'line', year = year_id, indicator = measure, model = "UNAIDS17", 
+                                                mean=mean/100, lower=lower/100, upper=upper/100)]
+    } else {
+      compare.dt.unaids <- NULL
+    }
+    plot.dt <- rbind(data, compare.dt, cur.dt, compare.dt.unaids, use.names = T)
+    plot.dt[,model := factor(model)]
+    color.list <- c('blue', 'red', 'purple')
+    names(color.list) <- c(run.name, ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run), "UNAIDS17")
+  } else {
+    plot.dt <- rbind(data, compare.dt, cur.dt, use.names = T)
+    plot.dt[,model := factor(model)]
+    color.list <- c('blue', 'red')
+    names(color.list) <- c(run.name, ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run))
+  }
   
+   
   pdf(paste0('/ihme/hiv/epp_output/gbd19/', run.name, "/", loc, '/', i, '.pdf'), width = 10, height = 6)
   gg <- ggplot()
     if(nrow(plot.dt[model == 'ANC Site']) > 0){
@@ -46,26 +67,52 @@ plot_15to49_draw<- function(loc, output, eppd, run.name, compare.run = '180702_n
   dev.off()
 }
 
-plot_15to49 <- function(loc, run.name, compare.run = '180702_numbat_combined'){
+plot_15to49 <- function(loc, run.name, compare.run = '180702_numbat_combined', un.comparison = FALSE){
   data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
   data <- data[agegr == '15-49']
   data[, c('agegr', 'sex') := NULL]
+  un.data <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/data/prepped/GBD17_comparison_data.csv")
+  
+  ##Deaths are only as counts in comparison file for UNAIDS
+  if(un.comparison){
+    use.metric <- 'Count'
+  } else {
+    use.metric <- 'Rate'
+  }
+  
   ## Comparison run
   compare.dt <- fread(paste0('/snfs1/WORK/04_epi/01_database/02_data/hiv/spectrum/summary/', compare.run, '/locations/', loc, '_spectrum_prep.csv'))
-  compare.dt <- compare.dt[age_group_id == 24 & sex_id == 3 & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == 'Rate']
+  compare.dt <- compare.dt[age_group_id == 24 & sex_id == 3 & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == use.metric]
   compare.dt <- compare.dt[,.(type = 'line', year = year_id, indicator = measure, model = ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run), mean, lower, upper)]
   
   cur.dt <- fread(paste0('/share/hiv/epp_output/gbd19/', run.name, '/compiled/', loc, '.csv'))
   cur.dt <- get_summary(cur.dt)
-  cur.dt <- cur.dt[age_group_id == 24 & sex == 'both' & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == 'Rate',.(type = 'line', year, indicator = measure, model = run.name, mean, lower, upper)]
+  cur.dt <- cur.dt[age_group_id == 24 & sex == 'both' & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == use.metric,.(type = 'line', year, indicator = measure, model = run.name, mean, lower, upper)]
   
-  plot.dt <- rbind(data, compare.dt, cur.dt, use.names = T)
-  plot.dt[,model := factor(model)]
-  color.list <- c('blue', 'red')
-  names(color.list) <- c(run.name, ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run))
+  if(un.comparison){
+    if(file.exists(un.data)){
+      compare.dt.unaids <- fread(un.data)
+      compare.dt.unaids <- compare.dt.unaids[age_group_id == 22 & sex_id == 3 & measure %in% c('Incidence', 'Prevalence', 'Deaths') & 
+                                               metric == use.metric & source=="UNAIDS17" & ihme_loc_id==loc]
+      compare.dt.unaids <- compare.dt.unaids[,.(type = 'line', year = year_id, indicator = measure, model = "UNAIDS17", 
+                                                mean=mean, lower=lower, upper=upper)]
+    } else {
+      compare.dt.unaids <- NULL
+    }
+    plot.dt <- rbind(data, compare.dt, cur.dt, compare.dt.unaids, use.names = T)
+    plot.dt[,model := factor(model)]
+    color.list <- c('blue', 'red', 'purple')
+    names(color.list) <- c(run.name, ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run), "UNAIDS17")
+  } else {
+    plot.dt <- rbind(data, compare.dt, cur.dt, use.names = T)
+    plot.dt[,model := factor(model)]
+    color.list <- c('blue', 'red')
+    names(color.list) <- c(run.name, ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run))
+  }
   
-  pdf(paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/15to49_plots/', loc, '.pdf'), width = 10, height = 6)
-  gg <- ggplot()
+
+    pdf(paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/15to49_plots/', loc, '.pdf'), width = 10, height = 6)
+    gg <- ggplot()
     if(nrow(plot.dt[model == 'ANC Site']) > 0){
       gg <- gg + geom_point(data = plot.dt[model == 'ANC Site'], aes(x = year, y = mean, shape = 'ANC Site'), alpha = 0.2)
     }
@@ -84,7 +131,7 @@ plot_15to49 <- function(loc, run.name, compare.run = '180702_numbat_combined'){
   dev.off()
 }
 
-plot_age_specific <- function(loc, run.name, compare.run = '180702_numbat_combined'){
+plot_age_specific <- function(loc, run.name, compare.run = '180702_numbat_combined', un.comparison = TRUE){
   data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
   data <- data[!agegr == '15-49']
   setnames(data, 'agegr', 'age')
@@ -99,7 +146,7 @@ plot_age_specific <- function(loc, run.name, compare.run = '180702_numbat_combin
   
   cur.dt <- fread(paste0('/share/hiv/epp_output/gbd19/', run.name, '/compiled/', loc, '.csv'))
   cur.dt <- get_summary(cur.dt)
-  cur.dt <- cur.dt[!age_group_id %in%c(24, 22) & !sex == 'both' & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == 'Rate',
+  cur.dt <- cur.dt[!age_group_id %in% c(24, 22) & !sex == 'both' & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == 'Rate',
                    .(age, sex, type = 'line', year, indicator = measure, model = run.name, mean, lower, upper)]
   
   both.dt <- rbind(data, compare.dt, cur.dt, use.names = T)
@@ -109,6 +156,7 @@ plot_age_specific <- function(loc, run.name, compare.run = '180702_numbat_combin
   ## TODO: age_group_name rather than age?
   both.dt[,age := factor(age, levels=paste0(seq(5, 80, 5)))]
   
+
   for(c.indicator in c('Incidence', 'Prevalence', 'Deaths')){
     pdf(paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/age_specific_plots/', c.indicator, '/', loc, '.pdf'), width = 10, height = 6)
     for(c.sex in c('male', 'female')){
