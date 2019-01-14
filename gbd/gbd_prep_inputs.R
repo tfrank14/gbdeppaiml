@@ -12,12 +12,11 @@ if(length(args) > 0) {
 	run.name <- args[1]
 	proj.end <- args[2]
 } else {
-	run.name <- "181126_test"
+	run.name <- "190102_test2"
 	proj.end <- 2019
 }
 
 out.dir <- paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/")
-#out.dir <- paste0('/share/homes/djahag/eppasm-1-trials/', run.name, "/")
 dir.create(out.dir, showWarnings = FALSE)
 
 ## Functions
@@ -44,7 +43,7 @@ invisible(lapply(epp.locs, function(c.location_id) {
 india.locs <- loc.table[level>4 & grepl("IND", ihme_loc_id) ,location_id]
 pop <- get_population(age_group_id = c(28, 49:128), location_id = india.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, single_year_age = T)
 dir.create(paste0(out.dir, '/population_single_age/india_splitting_locs/'), showWarnings = F)
-invisible(lapply(inda.locs, function(c.location_id) {
+invisible(lapply(india.locs, function(c.location_id) {
   out.pop <- copy(pop[location_id == c.location_id])
   c.iso <- loc.table[location_id == c.location_id, ihme_loc_id]
   write.csv(out.pop, paste0(out.dir, '/population_single_age/india_splitting_locs/', c.iso, ".csv"), row.names = F)
