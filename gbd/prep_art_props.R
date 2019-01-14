@@ -22,15 +22,15 @@ args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
     run.name <- args[1]
 } else {
-    run.name <- "190109_test"
+    run.name <- "190102_test2"
 }
 
 ### Paths
 surv.path <- paste0("/share/hiv/epp_output/gbd19/prev_surveys.csv")
 
-pop.dir <- paste0("/share/homes/djahag/eppasm-1-trials/190109_test/population_single_age/india_splitting_locs/")
+pop.dir <- paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/population_single_age/india_splitting_locs/")
 
-out.path = paste0("/share/homes/djahag/eppasm-1-trials/190109_test/art_prop.csv")
+out.path = paste0('/ihme/hiv/epp_input/gbd19/', run.name, '/art_prop.csv')
 plot.path <- paste0("/ihme/hiv/epp_output/gbd19/", run.name, "/art_prop.pdf")
 
 ### Functions
