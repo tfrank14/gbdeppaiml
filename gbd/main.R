@@ -17,7 +17,7 @@ if(length(args) > 0) {
 	i <- as.integer(Sys.getenv("SGE_TASK_ID"))
 } else {
 	run.name <- "190102_test2"
-	loc <- "NGA_25344"
+	loc <- "MWI"
 	stop.year <- 2019
 	i <- 1
 }
@@ -37,7 +37,6 @@ plot.draw <- TRUE
 
 
 ### Paths
-input.dir <- paste0()
 out.dir <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, "/", loc)
 
 ### Functions
@@ -71,6 +70,8 @@ if(!file.exists(data.path)){
 }
 rand.draw <- round(runif(1, min = 1, max = 3000))
 output.dt <- get_gbd_outputs(result[[rand.draw]], attr(dt, 'specfp'))
+## TODO: Find out how to fix final year and make sure we're using midyear inputs and outputs
+output.dt <- output.dt[year %in% start.year:stop.year]
 output.dt[,run_num := i]
 
 ## Write output to csv
