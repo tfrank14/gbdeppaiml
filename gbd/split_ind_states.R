@@ -1,9 +1,9 @@
 ################################################################################
 ## Purpose: Split India states into U/R using NFHS survey values
 ## Date created: 
-## Date modified:
-## Author: Austin Carter, aucarter@uw.edu
-## Run instructions: 
+## Date modified: January 15, 2019
+## Author: Austin Carter, aucarter@uw.edu, modified by Deepa Jahagirdar
+## Run instructions: Run after EPP-ASM India state locations are run; produces a table identical to EPP-ASM output for India level 5 locs
 ## Notes:
 ################################################################################
 
@@ -12,7 +12,7 @@ rm(list=ls())
 windows <- Sys.info()[1][["sysname"]]=="Windows"
 root <- ifelse(windows,"J:/","/home/j/")
 user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
-code.dir <- paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/HIV/")
+code.dir <- paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/gbdeppaiml/")
 
 ## Packages
 library(data.table);library(tidyr);library(dplyr)
@@ -22,18 +22,16 @@ args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
     run.name <- args[1]
 } else {
-    run.name <- "180401_meerkat"
+    run.name <- "190102_test2"
 }
 
 
 
 ### Paths
-dir.list <- paste0("/share/hiv/epp_output/gbd19/190102_test2/compiled/")
-
-
-prop.path <- paste0("/share/homes/djahag/eppasm-1-trials/190109_test/art_prop.csv")
-pop.dir <- list(paste0("/share/homes/djahag/eppasm-1-trials/190109_test/population_single_age/"),
-                 paste0("/share/homes/djahag/eppasm-1-trials/190109_test/population_single_age/india_splitting_locs/"))
+dir.list <- paste0('/share/hiv/epp_output/gbd19/',run.name,'/compiled/')
+prop.path <- paste0('/share/hiv/epp_input/gbd19/',run.name,"/art_prop.csv")
+pop.dir <- list(paste0('/share/hiv/epp_input/gbd19/',run.name,"/population_single_age/"),
+                 paste0('/share/hiv/epp_input/gbd19/',run.name,"/population_single_age/india_splitting_locs/"))
 
 ### Functions
 library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
@@ -41,7 +39,7 @@ library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
 
 ##Find corrent age groups and sex ids to match EPP-ASM output using one location
 source("/home/j/temp/central_comp/libraries/current/r/get_ids.R")
-x = fread(paste0(dir.list1,"IND_4841.csv"))
+x = fread(paste0(dir.list,"IND_4841.csv"))
 age_groups <- get_ids("age_group")
 x$age = as.factor(as.character(x$age))
 get.age.groups = unique(merge(x,age_groups, by.x='age', by.y = 'age_group_name')$age_group_id)
@@ -72,7 +70,8 @@ nat.rural15 <- 0.17
 
 ### Code
 ## Create minor territories
-file.list <- list.files(dir.list1, "IND")
+file.list <- list.files(dir.list, "IND")
+locs <- gsub(".csv", "", file.list)
 ind.locs <- loc.table[grepl("IND", ihme_loc_id) & level == 4, ihme_loc_id]
 missing.locs <- setdiff(ind.locs, locs)
 
@@ -83,9 +82,9 @@ missing.locs <- setdiff(ind.locs, locs)
 #     # ind.loc <- locs[[1]]
 #     print(measure)
 #     bound.dt <- rbindlist(lapply(locs, function(ind.loc) {
-#         path <- paste0(dir.list[[measure]], ind.loc, suffix.list[[measure]])
+#         path <- paste0(dir.list, ind.loc, ".csv")
 #         dt <- fread(path)
-#     })) 
+#     }))
 #     mean.dt <- bound.dt[, lapply(.SD, mean), by = "year"]
 #     for(loc in missing.locs) {
 #         out.path <- paste0(dir.list[[measure]], loc, suffix.list[[measure]])
@@ -107,7 +106,7 @@ state.locs <- loc.table[grepl("IND", ihme_loc_id) & level == 4 & epp == 1, ihme_
 for(state in state.locs) {
     loc.id <- as.integer(strsplit(state, "_")[[1]][2])
     children <- loc.table[parent_id == loc.id, ihme_loc_id]
-
+    
     pop.dt <- rbindlist(lapply(c(state, children), function(loc) {
         id <- strsplit(loc, "_")[[1]][2]
         path <- paste0(pop.dir[[1]], loc, ".csv")
@@ -144,7 +143,7 @@ for(state in state.locs) {
     path <- paste0(dir, state,".csv")
     state.dt <- fread(path)
     
-    #MAY NOT NEED TO TRANSPOSE THESE transpose draws, create and reduce to relevant measure - depends on final EPP-ASM output
+    #Transpose and reduce to relevant measure - depends on final EPP-ASM output
     cols <- as.character(rc_map[rc_map$type=="count","measure"])
     col_names <- as.character(rc_map[rc_map$type=="count","rate"])
     state.dt[, (col_names) := lapply(.SD, function(x) x/pop), .SDcols = cols]
@@ -153,43 +152,52 @@ for(state in state.locs) {
     #Create new file for each child location, merging across measures
       for(child in children) {   
         for(measure in measures) {
+              child.id <- loc.table[ihme_loc_id == child, location_id]
               measure <- as.character(measure) 
               cols <- c(stratum,measure)
-              state.dt$age = as.factor(as.character(state.dt$age))
-              state.dt = state.dt %>% left_join(sex_groups) 
+              state.dt[,age:=as.factor(as.character(age))]
+              state.dt = state.dt %>% left_join(sex_groups) %>% data.table()
               state.dt.t <- state.dt[,mget(cols)] 
               state.dt.t$run_num <- paste0("draw", state.dt.t$run_num )
               state.dt.t <- spread(state.dt.t, run_num, get(measure)) 
               
-              state.dt.t <- merge(state.dt.t,age_groups, by.x='age', by.y = 'age_group_name')
-       
+   
+              state.dt.t <- state.dt.t %>% left_join(sex_groups) %>% left_join(age_groups, by=c('age' = 'age_group_name')) %>% data.table()
+          
               max.draw <- max(state.dt$run_num)
               
               ##Ensure same order for multiplication
-              state.dt.t = state.dt.t %>% arrange(year,age_group_id,sex_id) %>% as.data.table()
-              pop.dt = pop.dt %>% arrange(location_id,year,age_group_id,sex_id)  %>% as.data.table()
+              state.dt.t = state.dt.t %>% arrange(year,age_group_id,sex_id, sex) %>% data.table()
+              pop.dt = pop.dt %>% arrange(location_id,year,age_group_id,sex_id)  %>% data.table()
               
-    
               matrix <- as.matrix(state.dt.t[, paste0("draw", 1:max.draw), with = F])
               count.matrix <- sweep(matrix, 1,  pop.dt[location_id == loc.id & year %in% state.dt.t$year,population], "*")
+   
               
+              #Get counts for relevent measure  for child region
               child.result <- count.matrix * props[ihme_loc_id == child, prop]
-              child.id <- as.integer(gsub("IND_", "", child))
               
-                if(rc_map[as.character(rc_map$rate)==measure,'type']=='rate'){
+              #Get total population counts for child region - SHOULD THIS BE TOTAL POPULATION (FROM GBD/EPP-ASM) OR POP AS DERIVED BY PREP_ART_PROPS.R
+              child.pop <-  copy(pop.dt[location_id == loc.id,])
+              child.pop <- child.pop[,c('child','population'):=list(child,population*props[location_id == child, prop])]
+              child.pop <- child.pop[,location_id := gsub("IND_", "", child)]
+              setnames(child.pop,"population", "pop")
+          
+               if(rc_map[as.character(rc_map$rate)==measure,'type']=='rate'){
                   child.result  <- sweep(child.result, 1,  1 / pop.dt[location_id == child.id & year %in% state.dt$year, population], "*")
                 }
-                
-              #Revert to original count variable name and datatable format
+      
+              #Revert to original count variable name and datatable format as outputted by EPP-ASM
               measure_revert <- as.character(rc_map[as.character(rc_map$rate)==measure,'measure'])
-              store.measures <- as.data.table(cbind(state.dt.t[, .(year,age,age_group_id,sex_id)], child.result))
-              store.measures <- store.measures %>% left_join(state.dt %>% select(age,sex,sex_id,year,pop)) %>% select(-age_group_id,-sex_id)
-              store.measures.list[[measure]] <- store.measures %>% gather_(key="run_num", value =  measure_revert, 
-                                               colnames(.)[!colnames(.) %in% c("year","sex_id","age","age_group_id","pop","sex")]) %>% data.table()
-                                                       
-              
+              store.measures <- as.data.table(cbind(state.dt.t[, .(year,age,age_group_id,sex_id, sex)], child.result))
+              store.measures <- merge(store.measures, child.pop)
+              store.measures.list[[measure]] <- store.measures %>% select(-child,-location_id) %>% gather_(key="run_num", value =  measure_revert, 
+                                               colnames(.)[!colnames(.) %in% c("year","sex_id","age","age_group_id", "sex", "pop")]) %>% data.table()
+              store.measures.list[[measure]][,run_num := gsub("draw","", run_num)]
+               
+    
       }
-        
+   
         out.dt <- Reduce(function(x, y) {merge(x, y)}, store.measures.list)
         write.csv(out.dt, paste0(dir, child ,".csv"), row.names = F)
     }
