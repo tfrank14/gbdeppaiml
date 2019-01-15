@@ -476,3 +476,36 @@ sub.anc <- function(loc, dt, i) {
   return(dt)
 }
 
+
+sub.art <- function(dt, loc) {
+  if(grepl("KEN", loc) & loc.table[ihme_loc_id == loc, level] == 5) {
+    temp.loc <- loc.table[location_id == loc.table[ihme_loc_id == loc, parent_id], ihme_loc_id]
+  } else {
+    temp.loc <- loc
+  }
+  unaids.year <- loc.table[ihme_loc_id == temp.loc, unaids_recent]
+  art.path <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/extrapolate_ART/PV_testing/UNAIDS_", unaids.year, "/", temp.loc, "_Adult_ART_cov.csv")
+  art.dt <- fread(art.path)
+  art.dt[is.na(art.dt)] <- 0
+  art.dt[, type := ifelse(ART_cov_pct > 0, "P", "N")]	
+  years <- epp.input$epp.art$year
+  if(max(years) > max(art.dt$year)) {
+    max.dt <- copy(art.dt[year == max(year)])
+    missing.years <- setdiff(years, art.dt$year)
+    add.dt <- rbindlist(lapply(missing.years, function(cyear) {
+      copy.dt <- copy(max.dt)
+      copy.dt[, year := cyear]
+    }))
+    art.dt <- rbind(art.dt, add.dt)
+  }
+  epp.input$epp.art$m.isperc <- art.dt[year %in% years & sex == 1, type]
+  epp.input$epp.art$f.isperc <- art.dt[year %in% years & sex == 1, type]
+  art.dt[, ART_cov_val := ifelse(ART_cov_pct > 0, ART_cov_pct, ART_cov_num)]
+  # scalar.path <- paste0("/share/hiv/adult_art_props/170617_hotsauce_high/data/", loc, ".csv")
+  # scalar.dt <- fread(scalar.path)
+  # epp.input$epp.art$m.val <- art.dt[year %in% years & sex == 1, ART_cov_val] * scalar.dt[year %in% years & sex == "male", prop]
+  # epp.input$epp.art$f.val <- art.dt[year %in% years & sex == 2, ART_cov_val] * scalar.dt[year %in% years & sex == "female", prop]
+  epp.input$epp.art$m.val <- art.dt[year %in% years & sex == 1, ART_cov_val]
+  epp.input$epp.art$f.val <- art.dt[year %in% years & sex == 2, ART_cov_val]
+  return(epp.input)
+}

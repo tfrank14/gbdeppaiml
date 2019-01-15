@@ -98,7 +98,7 @@ for(loc in loc.list) {
 }
 
 ## Compile plots
-  plot.holds <- paste0(loc.list, '_plot_eppasm')
+  plot.holds <- paste(paste0(loc.list, '_plot_eppasm'), collapse = ",")
   plot.string <- paste0("qsub -P ", cluster.project, " -pe multi_slot 1 ",
                         "-e /share/temp/sgeoutput/", user, "/errors ",
                         "-o /share/temp/sgeoutput/", user, "/output ",
