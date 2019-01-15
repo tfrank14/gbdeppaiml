@@ -1,7 +1,7 @@
 ## Reads in prepped .rds object and subs in indicated GBD parameters
 ## Output object is read to run through fitmod()
 read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.params.sub = TRUE, 
-                             pop.sub = TRUE, anc.sub = FALSE, prev.sub = TRUE, popadjust = TRUE, age.prev = FALSE){
+                             pop.sub = TRUE, anc.sub = FALSE, prev.sub = TRUE, popadjust = TRUE, age.prev = FALSE, sub.art = TRUE){
   dt <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped/', loc, '.rds'))
   
   ## Substitute IHME data
@@ -57,7 +57,14 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
     dt <- sub.on.art(dt, loc, i)
     dt <- sub.cd4.prog(dt, loc, i)
   }
+  
+  if(sub.art){
+    print('Sub ART data')
+    dt <- sub.art(dt,loc, use.recent.unaids = FALSE)
+  }
+  
   return(dt)
+
   
 }
   
