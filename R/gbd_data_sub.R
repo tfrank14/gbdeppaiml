@@ -488,9 +488,9 @@ sub.art <- function(dt, loc, use.recent.unaids = FALSE) {
    ##Find most recent file
   art.file.path <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/extrapolate_ART/PV_testing/")
   loc.files <- list.files(art.file.path,recursive = TRUE, pattern=loc)
+  unaids.files <- gsub("/.*","",loc.files[grep("UNAIDS_",loc.files)])
   
-  if (length(loc.files)>0){
-    unaids.files <- gsub("/.*","",loc.files[grep("UNAIDS_",loc.files)])
+  if (length(unaids.files)>0){
     recent <- max(gsub("UNAIDS_","", unaids.files))
     art.path <- paste0(art.file.path,"/UNAIDS_", recent, "/", temp.loc, "_Adult_ART_cov.csv")
     art.dt <- fread(art.path)
