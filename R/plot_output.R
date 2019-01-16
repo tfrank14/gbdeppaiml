@@ -12,7 +12,6 @@ plot_15to49_draw<- function(loc, output, eppd, run.name, compare.run = '180702_n
   data <- data[agegr == '15-49']
   data[, c('agegr', 'sex') := NULL]
   un.data <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/data/prepped/GBD17_comparison_data.csv")
-  un.data <- paste0(root,'/share/hiv/data/UNAIDS_extract/2018')
 
 ## Comparison run
   if(file.exists(paste0('/snfs1/WORK/04_epi/01_database/02_data/hiv/spectrum/summary/', compare.run, '/locations/', loc, '_spectrum_prep.csv'))){
