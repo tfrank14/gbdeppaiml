@@ -485,14 +485,13 @@ sub.art <- function(dt, loc, use.recent.unaids = FALSE) {
   }
   
   #Will need to update once we have 2018
-  if(use.recent.unaids==TRUE){
-  unaids.year <- loc.table[ihme_loc_id == temp.loc, unaids_recent]
-  } else {
-  unaids.year <- 2017
+  for(c.year in c('UNAIDS_2017', 'UNAIDS_2016', 'UNAIDS_2015', '140520')){
+    art.path <-paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/extrapolate_ART/PV_testing/", c.year, "/", temp.loc, "_Adult_ART_cov.csv") 
+    if(file.exists(art.path)){
+      art.dt <- fread(art.path)
+      break;
+    }
   }
-  
-  art.path <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/extrapolate_ART/PV_testing/UNAIDS_", unaids.year, "/", temp.loc, "_Adult_ART_cov.csv")
-  art.dt <- fread(art.path)
   art.dt[is.na(art.dt)] <- 0
   
   ##Need this to be logical later
@@ -530,5 +529,16 @@ sub.art <- function(dt, loc, use.recent.unaids = FALSE) {
   #epp.input$epp.art$f.val <- art.dt[year %in% years & sex == 2, ART_cov_val]
   attr(dt,"specfp")$art15plus_num[attr(attr(dt,"specfp")$art15plus_num,"dimnames")$sex=="Female"] <- art.dt[year %in% years & sex == 2, ART_cov_val]
   
+  return(dt)
+}
+
+## TODO - create india states
+sub.sexincrr <- function(dt, loc, i){
+  rr.dt <- fread(paste0('/share/hiv/spectrum_input/FtoM_inc_ratio/', loc, '.csv'))
+  rr <- rr.dt[draw == i, FtoM_inc_ratio]
+  final.rr <- rr[length(rr)]
+  rr <- c(rr, rep(final.rr, length(start.year:stop.year) - length(rr)))
+  names(rr) <- start.year:stop.year
+  attr(dt, 'specfp')$incrr_sex <- rr
   return(dt)
 }
