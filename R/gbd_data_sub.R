@@ -517,16 +517,7 @@ sub.art <- function(dt, loc, use.recent.unaids = FALSE) {
   attr(dt,"specfp")$art15plus_isperc[attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$sex=="Female"] <- art.dt[year %in% years & sex == 2, type]
   
   art.dt[, ART_cov_val := ifelse(ART_cov_pct > 0, ART_cov_pct, ART_cov_num)]
-  
-  ##DELETE THIS???
-  # scalar.path <- paste0("/share/hiv/adult_art_props/170617_hotsauce_high/data/", loc, ".csv")
-  # scalar.dt <- fread(scalar.path)
-  # epp.input$epp.art$m.val <- art.dt[year %in% years & sex == 1, ART_cov_val] * scalar.dt[year %in% years & sex == "male", prop]
-  # epp.input$epp.art$f.val <- art.dt[year %in% years & sex == 2, ART_cov_val] * scalar.dt[year %in% years & sex == "female", prop]
-  
-  #epp.input$epp.art$m.val <- art.dt[year %in% years & sex == 1, ART_cov_val]
   attr(dt,"specfp")$art15plus_num[attr(attr(dt,"specfp")$art15plus_num,"dimnames")$sex=="Male"] <- art.dt[year %in% years & sex == 1, ART_cov_val]
-  #epp.input$epp.art$f.val <- art.dt[year %in% years & sex == 2, ART_cov_val]
   attr(dt,"specfp")$art15plus_num[attr(attr(dt,"specfp")$art15plus_num,"dimnames")$sex=="Female"] <- art.dt[year %in% years & sex == 2, ART_cov_val]
   
   return(dt)
@@ -542,3 +533,4 @@ sub.sexincrr <- function(dt, loc, i){
   attr(dt, 'specfp')$incrr_sex <- rr
   return(dt)
 }
+

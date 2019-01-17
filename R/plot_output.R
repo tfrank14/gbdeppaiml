@@ -12,41 +12,43 @@ plot_15to49_draw<- function(loc, output, eppd, run.name, compare.run = '180702_n
   data <- data[agegr == '15-49']
   data[, c('agegr', 'sex') := NULL]
   un.data <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/data/prepped/GBD17_comparison_data.csv")
-  un.data <- paste0(root,'/share/hiv/data/UNAIDS_extract/2018')
+  
+  if(un.comparison){
+    compare.dt.unaids <- fread(un.data)
+    compare.dt.unaids <- compare.dt.unaids[age_group_id == 22 & sex_id == 3 & measure %in% c('Incidence', 'Prevalence') & 
+                                             metric == 'Rate' & source=="UNAIDS17" & ihme_loc_id==loc]
+  }
 
 ## Comparison run
   if(file.exists(paste0('/snfs1/WORK/04_epi/01_database/02_data/hiv/spectrum/summary/', compare.run, '/locations/', loc, '_spectrum_prep.csv'))){
     compare.dt <- fread(paste0('/snfs1/WORK/04_epi/01_database/02_data/hiv/spectrum/summary/', compare.run, '/locations/', loc, '_spectrum_prep.csv'))
     compare.dt <- compare.dt[age_group_id == 24 & sex_id == 3 & measure %in% c('Incidence', 'Prevalence') & metric == 'Rate']
     compare.dt <- compare.dt[,.(type = 'line', year = year_id, indicator = measure, model = ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run), mean, lower, upper)]
-  } else{
+  } else {
     compare.dt <- NULL
   }
   
   cur.dt <- get_summary(output)
   cur.dt <- cur.dt[age_group_id == 24 & sex == 'both' & measure %in% c('Incidence', 'Prevalence') & metric == 'Rate',.(type = 'line', year, indicator = measure, model = run.name, mean, lower = NA, upper = NA)]
   
-  if(un.comparison){
-    if(file.exists(un.data)){
-      compare.dt.unaids <- fread(un.data)
-      compare.dt.unaids <- compare.dt.unaids[age_group_id == 22 & sex_id == 3 & measure %in% c('Incidence', 'Prevalence') & 
-                                             metric == 'Rate' & source=="UNAIDS17" & ihme_loc_id==loc]
+
+  if(nrow(compare.dt.unaids) > 0 & un.comparison == TRUE) {
       compare.dt.unaids <- compare.dt.unaids[,.(type = 'line', year = year_id, indicator = measure, model = "UNAIDS17", 
                                                 mean=mean/100, lower=lower/100, upper=upper/100)]
-    } else {
-      compare.dt.unaids <- NULL
-    }
-    plot.dt <- rbind(data, compare.dt, cur.dt, compare.dt.unaids, use.names = T)
-    plot.dt[,model := factor(model)]
-    color.list <- c('blue', 'red', 'purple')
-    names(color.list) <- c(run.name, ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run), "UNAIDS17")
-  } else {
-    plot.dt <- rbind(data, compare.dt, cur.dt, use.names = T)
-    plot.dt[,model := factor(model)]
-    color.list <- c('blue', 'red')
-    names(color.list) <- c(run.name, ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run))
-  }
-  
+      plot.dt <- rbind(data, compare.dt, cur.dt, compare.dt.unaids, use.names = T)
+      plot.dt[,model := factor(model)]
+      color.list <- c('blue', 'red', 'purple')
+      names(color.list) <- c(run.name, ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run), "UNAIDS17")
+      
+      } else {
+        
+      plot.dt <- rbind(data, compare.dt, cur.dt, use.names = T)
+      plot.dt[,model := factor(model)]
+      color.list <- c('blue', 'red')
+      names(color.list) <- c(run.name, ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run))
+      
+      }
+    
    
   pdf(paste0('/ihme/hiv/epp_output/gbd19/', run.name, "/", loc, '/', i, '.pdf'), width = 10, height = 6)
   gg <- ggplot()
@@ -75,12 +77,12 @@ plot_15to49 <- function(loc, run.name, compare.run = '180702_numbat_combined', u
 
   ## Comparison run
   compare.dt <- fread(paste0('/snfs1/WORK/04_epi/01_database/02_data/hiv/spectrum/summary/', compare.run, '/locations/', loc, '_spectrum_prep.csv'))
-  compare.dt <- compare.dt[age_group_id == 24 & sex_id == 3 & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == use.metric]
+  compare.dt <- compare.dt[age_group_id == 24 & sex_id == 3 & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == "Rate"]
   compare.dt <- compare.dt[,.(type = 'line', year = year_id, indicator = measure, model = ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run), mean, lower, upper)]
   
   cur.dt <- fread(paste0('/share/hiv/epp_output/gbd19/', run.name, '/compiled/', loc, '.csv'))
   cur.dt <- get_summary(cur.dt)
-  cur.dt <- cur.dt[age_group_id == 24 & sex == 'both' & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == use.metric,.(type = 'line', year, indicator = measure, model = run.name, mean, lower, upper)]
+  cur.dt <- cur.dt[age_group_id == 24 & sex == 'both' & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == "Rate",.(type = 'line', year, indicator = measure, model = run.name, mean, lower, upper)]
   
 
   plot.dt <- rbind(data, compare.dt, cur.dt, use.names = T)
