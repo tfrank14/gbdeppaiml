@@ -60,14 +60,14 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
     dt <- sub.cd4.prog(dt, loc, i)
   }
   
+<<<<<<< HEAD
   if(art.sub){
     print('Substituting ART data')
+=======
+  if(sub.art){
+    print('Sub ART data')
+>>>>>>> cdb82b7561177760983b94e3df80e1e67476899f
     dt <- sub.art(dt,loc, use.recent.unaids = FALSE)
-  }
-  
-  if(!age.prev & sexincrr.sub){
-    print('Substituting sex inc rr')
-    dt <- sub.sexincrr(dt, loc, i)
   }
   
   return(dt)
