@@ -5,7 +5,7 @@
 #'
 
 
-plot_15to49_draw<- function(loc, output, eppd, run.name, compare.run = '180702_numbat_combined', un.comparison = TRUE){
+plot_15to49_draw <- function(loc, output, eppd, run.name, compare.run = '180702_numbat_combined', un.comparison = TRUE){
   ## Get data used in fitting model
   ## TODO: call save_data somewhere else
   data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
@@ -18,6 +18,11 @@ plot_15to49_draw<- function(loc, output, eppd, run.name, compare.run = '180702_n
     compare.dt.unaids <- compare.dt.unaids[age_group_id == 22 & sex_id == 3 & measure %in% c('Incidence', 'Prevalence') & 
                                              metric == 'Rate' & source=="UNAIDS17" & ihme_loc_id==loc]
   }
+  
+  if(nrow(compare.dt.unaids) == 0){
+    un.comparison <- FALSE
+  }
+  
 
 ## Comparison run
   if(file.exists(paste0('/snfs1/WORK/04_epi/01_database/02_data/hiv/spectrum/summary/', compare.run, '/locations/', loc, '_spectrum_prep.csv'))){
@@ -32,7 +37,7 @@ plot_15to49_draw<- function(loc, output, eppd, run.name, compare.run = '180702_n
   cur.dt <- cur.dt[age_group_id == 24 & sex == 'both' & measure %in% c('Incidence', 'Prevalence') & metric == 'Rate',.(type = 'line', year, indicator = measure, model = run.name, mean, lower = NA, upper = NA)]
   
 
-  if(nrow(compare.dt.unaids) > 0 & un.comparison == TRUE) {
+  if(un.comparison == TRUE) {
       compare.dt.unaids <- compare.dt.unaids[,.(type = 'line', year = year_id, indicator = measure, model = "UNAIDS17", 
                                                 mean=mean/100, lower=lower/100, upper=upper/100)]
       plot.dt <- rbind(data, compare.dt, cur.dt, compare.dt.unaids, use.names = T)
@@ -70,10 +75,25 @@ plot_15to49_draw<- function(loc, output, eppd, run.name, compare.run = '180702_n
   dev.off()
 }
 
-plot_15to49 <- function(loc, run.name, compare.run = '180702_numbat_combined', un.comparison = FALSE){
+plot_15to49 <- function(loc, run.name, compare.run = '180702_numbat_combined', un.comparison = TRUE){
   data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
   data <- data[agegr == '15-49']
   data[, c('agegr', 'sex') := NULL]
+  
+  ##UNAIDS data
+  un.data <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/data/prepped/GBD17_comparison_data.csv")
+  
+  if(un.comparison){
+    compare.dt.unaids <- fread(un.data)
+    compare.dt.unaids <- compare.dt.unaids[age_group_id == 22 & sex_id == 3 & measure %in% c('Incidence', 'Prevalence') & 
+                                             metric == 'Rate' & source=="UNAIDS17" & ihme_loc_id==loc]
+  }
+  
+  ##If no data set to false
+  if(nrow(compare.dt.unaids) == 0){
+    un.comparison <- FALSE
+  }
+  
 
   ## Comparison run
   compare.dt <- fread(paste0('/snfs1/WORK/04_epi/01_database/02_data/hiv/spectrum/summary/', compare.run, '/locations/', loc, '_spectrum_prep.csv'))
@@ -84,14 +104,25 @@ plot_15to49 <- function(loc, run.name, compare.run = '180702_numbat_combined', u
   cur.dt <- get_summary(cur.dt)
   cur.dt <- cur.dt[age_group_id == 24 & sex == 'both' & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == "Rate",.(type = 'line', year, indicator = measure, model = run.name, mean, lower, upper)]
   
-
+  if(un.comparison == TRUE) {
+    compare.dt.unaids <- compare.dt.unaids[,.(type = 'line', year = year_id, indicator = measure, model = "UNAIDS17", 
+                                              mean=mean/100, lower=lower/100, upper=upper/100)]
+    plot.dt <- rbind(data, compare.dt, cur.dt, compare.dt.unaids, use.names = T)
+    plot.dt[,model := factor(model)]
+    color.list <- c('blue', 'red', 'purple')
+    names(color.list) <- c(run.name, ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run), "UNAIDS17")
+    
+  } else {
+  
   plot.dt <- rbind(data, compare.dt, cur.dt, use.names = T)
   plot.dt[,model := factor(model)]
   color.list <- c('blue', 'red')
   names(color.list) <- c(run.name, ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run))
+  
+  }
  
 
-    pdf(paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/15to49_plots/', loc, '.pdf'), width = 10, height = 6)
+  pdf(paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/15to49_plots/', loc, '.pdf'), width = 10, height = 6)
     gg <- ggplot()
     if(nrow(plot.dt[model == 'ANC Site']) > 0){
       gg <- gg + geom_point(data = plot.dt[model == 'ANC Site'], aes(x = year, y = mean, shape = 'ANC Site'), alpha = 0.2)
