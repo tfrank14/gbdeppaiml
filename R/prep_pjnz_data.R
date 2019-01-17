@@ -316,11 +316,16 @@ create_hivproj_param <- function(loc, start.year = 1970, stop.year = 2019){
                                 CD4cat = c("CD4_1000", "CD4_750",  "CD4_500",  "CD4_350",  "CD4_200",  "CD4_0"),
                                 Sex = c('Male', 'Female'),
                                 Year = paste0(proj.years))
-  ## NOTE Using test run directory
+  ##TODO fix this NOTE Using test run directory
   dir <- paste0('/share/hiv/epp_input/gbd19/181126_test/')
   pop <- fread(paste0(dir, '/population_single_age/', loc, '.csv'))
   pop <- pop[age_group_id == 14 + 48]
   pop <- pop[,.(year = year_id, sex_id, population)]
+  while(max(pop$year) != stop.year){
+    pop.ext <- pop[year == max(pop$year)]
+    pop.ext[,year := year + 1]
+    pop <- rbind(pop, pop.ext)
+  }
   pop <- dcast.data.table(pop, sex_id~year, value.var = 'population')
   pop[, sex_id := NULL]
   age14totpop <- as.matrix(pop)

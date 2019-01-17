@@ -464,9 +464,12 @@ sub.anc <- function(loc, dt, i) {
   eppd$ancrtsite.n = rbind(eppd$ancrtsite.n,  enter.mat)
   }
 }
-
+  
   if(!length(dt)){
-    attr(dt, "likdat") <- epp::fnCreateLikDat(eppd, anchor.year = floor(attr(dt, "specfp")$proj.steps[1]))
+    eppd <- list()
+    eppd[[1]] <- attr(dt, 'eppd')
+    eppd <- Map("[[<-", eppd, "ancsitedat", lapply(eppd, melt_ancsite_data))
+    attr(dt, 'eppd') <- eppd[[1]]
   } else{
     attr(dt[[gen.pop]], "likdat") <- epp::fnCreateLikDat(eppd, anchor.year = floor(attr(dt[[gen.pop]], "specfp")$proj.steps[1]))
   }

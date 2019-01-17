@@ -11,8 +11,8 @@ library(data.table)
 
 ## Arguments
 run.name <- "190102_test2"
-proj.end <- 2019
-n.draws <- 10
+proj.end <- 2020
+n.draws <- 100
 cluster.project <- "proj_hiv"
 
 ### Paths
@@ -29,7 +29,7 @@ loc.table <- data.table(get_locations(hiv_metadata = T))
 
 ### Code
 epp.list <- sort(loc.table[epp == 1, ihme_loc_id])
-loc.list <- epp.list
+loc.list <- epp.list[grepl('IND_', epp.list)]
 
 # Cache inputs
 if(!file.exists(paste0(input.dir, "population/"))) {
@@ -51,6 +51,17 @@ if(!file.exists(paste0(input.dir, 'prev_surveys.csv'))){
                      code.dir, "gbd/cache_prev_surveys.R"," ",run.name)
   print(prev.job)
   system(prev.job)
+}
+
+# Prepare ART proportions
+if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
+  prop.job <- paste0("qsub -P ", cluster.project," -N eppasm_art_prop_", run.name," -hold_jid eppasm_prev_cache_", run.name, " ", 
+                     "-e /share/temp/sgeoutput/", user, "/errors ",
+                     "-o /share/temp/sgeoutput/", user, "/output ",
+                     code.dir, "gbd/singR_shell.sh ", 
+                    code.dir, "gbd/prep_art_props.R ", run.name)
+  print(prop.job)
+  system(prop.job)
 }
 
 # Prepare ART proportions
