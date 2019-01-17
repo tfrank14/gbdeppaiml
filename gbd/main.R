@@ -16,10 +16,10 @@ if(length(args) > 0) {
   stop.year <- as.integer(args[3])
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
 } else {
-  run.name <- "190102_test2"
-  loc <- "MWI"
-  stop.year <- 2020
-  i <- 1
+	run.name <- "190102_test2"
+	loc <- "MWI"
+	stop.year <- 2020
+	i <- 1
 }
 
 ### Arguments

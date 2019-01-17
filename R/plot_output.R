@@ -23,8 +23,8 @@ plot_15to49_draw <- function(loc, output, eppd, run.name, compare.run = '180702_
     un.comparison <- FALSE
   }
   
-  
-  ## Comparison run
+
+## Comparison run
   if(file.exists(paste0('/snfs1/WORK/04_epi/01_database/02_data/hiv/spectrum/summary/', compare.run, '/locations/', loc, '_spectrum_prep.csv'))){
     compare.dt <- fread(paste0('/snfs1/WORK/04_epi/01_database/02_data/hiv/spectrum/summary/', compare.run, '/locations/', loc, '_spectrum_prep.csv'))
     compare.dt <- compare.dt[age_group_id == 24 & sex_id == 3 & measure %in% c('Incidence', 'Prevalence') & metric == 'Rate']
@@ -35,7 +35,6 @@ plot_15to49_draw <- function(loc, output, eppd, run.name, compare.run = '180702_
   
   cur.dt <- get_summary(output)
   cur.dt <- cur.dt[age_group_id == 24 & sex == 'both' & measure %in% c('Incidence', 'Prevalence') & metric == 'Rate',.(type = 'line', year, indicator = measure, model = run.name, mean, lower = NA, upper = NA)]
-  
   
   if(un.comparison == TRUE) {
     compare.dt.unaids <- compare.dt.unaids[,.(type = 'line', year = year_id, indicator = measure, model = "UNAIDS17", 
@@ -94,7 +93,6 @@ plot_15to49 <- function(loc, run.name, compare.run = '180702_numbat_combined', u
     un.comparison <- FALSE
   }
   
-  
   ## Comparison run
   compare.dt <- fread(paste0('/snfs1/WORK/04_epi/01_database/02_data/hiv/spectrum/summary/', compare.run, '/locations/', loc, '_spectrum_prep.csv'))
   compare.dt <- compare.dt[age_group_id == 24 & sex_id == 3 & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == "Rate"]
@@ -112,22 +110,21 @@ plot_15to49 <- function(loc, run.name, compare.run = '180702_numbat_combined', u
     color.list <- c('blue', 'red', 'purple')
     names(color.list) <- c(run.name, ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run), "UNAIDS17")
     
-  } else {
-    
-    plot.dt <- rbind(data, compare.dt, cur.dt, use.names = T)
-    plot.dt[,model := factor(model)]
-    color.list <- c('blue', 'red')
-    names(color.list) <- c(run.name, ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run))
-    
+  } else {  
+  plot.dt <- rbind(data, compare.dt, cur.dt, use.names = T)
+  plot.dt[,model := factor(model)]
+  color.list <- c('blue', 'red')
+  names(color.list) <- c(run.name, ifelse(compare.run == '180702_numbat_combined', 'GBD2017', compare.run))
+  
   }
-  
-  
+ 
+
   pdf(paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/15to49_plots/', loc, '.pdf'), width = 10, height = 6)
-  gg <- ggplot()
-  if(nrow(plot.dt[model == 'ANC Site']) > 0){
-    gg <- gg + geom_point(data = plot.dt[model == 'ANC Site'], aes(x = year, y = mean, shape = 'ANC Site'), alpha = 0.2)
-  }
-  gg <- gg + geom_line(data = plot.dt[type == 'line'], aes(x = year, y = mean, color = model)) +
+    gg <- ggplot()
+    if(nrow(plot.dt[model == 'ANC Site']) > 0){
+      gg <- gg + geom_point(data = plot.dt[model == 'ANC Site'], aes(x = year, y = mean, shape = 'ANC Site'), alpha = 0.2)
+    }
+    gg <- gg + geom_line(data = plot.dt[type == 'line'], aes(x = year, y = mean, color = model)) +
     geom_ribbon(data = plot.dt[type == 'line'], aes(x = year, ymin = lower, ymax = upper,  fill = model), alpha = 0.2) +
     facet_wrap(~indicator, scales = 'free_y') +
     theme_bw() +
