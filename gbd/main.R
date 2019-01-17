@@ -5,7 +5,7 @@ root <- ifelse(windows,"J:/","/home/j/")
 user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
 code.dir <- paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/gbdeppaiml/")
 ## Packages
-library(data.table); library(mvtnorm); library(survey)
+library(data.table); library(mvtnorm); library(survey); library(ggplot2)
 
 ## Arguments
 args <- commandArgs(trailingOnly = TRUE)
@@ -18,7 +18,7 @@ if(length(args) > 0) {
 } else {
 	run.name <- "190102_test2"
 	loc <- "MWI"
-	stop.year <- 2019
+	stop.year <- 2020
 	i <- 1
 }
 
@@ -26,13 +26,14 @@ if(length(args) > 0) {
 start.year <- 1970
 trans.params.sub <- TRUE
 pop.sub <- TRUE
-art.sub <- FALSE
-anc.sub <- FALSE
+art.sub <- TRUE
+anc.sub <- TRUE
 prev.sub <- TRUE
-anc.prior <- TRUE
-no.anc <- FALSE
-anc.backcast <- FALSE
-popadjust <- TRUE
+sexincrr.sub = TRUE
+# anc.prior <- FALSE
+anc.backcast <- TRUE
+age.prev = FALSE
+popadjust <- FALSE
 plot.draw <- TRUE
 
 
@@ -52,10 +53,10 @@ loc.table <- data.table(get_locations(hiv_metadata = T))
 ### Code
 ## Read in spectrum object, sub in GBD parameters
 dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, 
-                       pop.sub, anc.sub, prev.sub, popadjust = TRUE, age.prev = FALSE)
+                       pop.sub, anc.sub, anc.backcast, prev.sub, art.sub, sexincrr.sub, popadjust, age.prev)
 
 ## Fit model
-fit <- fitmod(dt, eppmod = 'rhybrid', rw_start = 2010,B0=1e3, B=1e2, opt_iter=1:2*5, number_k = 5)
+fit <- fitmod(dt, eppmod = 'rhybrid', rw_start = 2010, B0=1e3, B=1e2, opt_iter=1:2*5, fit_incrr = 'linincrr', number_k = 4)
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)
