@@ -10,7 +10,7 @@ date <- substr(gsub("-","",Sys.Date()),3,8)
 library(data.table)
 
 ## Arguments
-run.name <- "190102_test2"
+run.name <- "190117_group1_agesex"
 proj.end <- 2020
 n.draws <- 100
 cluster.project <- "proj_hiv"
@@ -29,7 +29,7 @@ loc.table <- data.table(get_locations(hiv_metadata = T))
 
 ### Code
 epp.list <- sort(loc.table[epp == 1, ihme_loc_id])
-loc.list <- epp.list[grepl('IND_', epp.list)]
+loc.list <- epp.list[!grepl('KEN_', epp.list) & !grepl('NGA_', epp.list)]
 
 # Cache inputs
 if(!file.exists(paste0(input.dir, "population/"))) {
@@ -63,10 +63,6 @@ if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
   print(prop.job)
   system(prop.job)
 }
-
-# Prepare ART proportions
-## TODO
-# system(paste0("qsub -P ", cluster.project," -N art_prop -hold_jid prev_cache ", code.dir, "shell_R.sh ", code.dir, "epp-feature-reset/gbd/prep_art_props.R ", run.name))
 
 ## Launch EPP
 for(loc in loc.list) {

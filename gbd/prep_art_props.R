@@ -95,13 +95,13 @@ gg <- ggplot(out.dt) + geom_point(aes(x = iso3, y = prop))
 print(gg)
 dev.off()
 
-## Add Kenya - SEE ABOUT THIS
-# prop.path <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/data/prepped/KEN_ART_props.csv")
-# prop.dt <- fread(prop.path)
-# ken.prop <- prop.dt[, .(ihme_loc_id, prop_pepfar)]
-# setnames(ken.prop, "prop_pepfar", "prop")
-# setnames(out.dt, "iso3", "ihme_loc_id")
-# out.dt <- rbind(out.dt, ken.prop)
+## Add Kenya
+prop.path <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/data/prepped/KEN_ART_props.csv")
+prop.dt <- fread(prop.path)
+ken.prop <- prop.dt[, .(ihme_loc_id, prop_pepfar)]
+setnames(ken.prop, "prop_pepfar", "prop")
+setnames(out.dt, "iso3", "ihme_loc_id")
+out.dt <- rbind(out.dt, ken.prop)
 
 write.csv(out.dt, out.path, row.names = F)
 

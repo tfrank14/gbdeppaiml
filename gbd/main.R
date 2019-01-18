@@ -16,7 +16,7 @@ if(length(args) > 0) {
   stop.year <- as.integer(args[3])
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
 } else {
-	run.name <- "190102_test2"
+	run.name <- "190117_group1_agesex"
 	loc <- "MWI"
 	stop.year <- 2020
 	i <- 1
@@ -32,7 +32,7 @@ prev.sub <- TRUE
 sexincrr.sub <- TRUE
 # anc.prior <- FALSE
 anc.backcast <- TRUE
-age.prev <- FALSE
+age.prev <- TRUE
 popadjust <- FALSE
 plot.draw <- TRUE
 
@@ -48,7 +48,7 @@ setwd(code.dir)
 devtools::load_all()
 
 ### Tables
-loc.table <- data.table(get_locations(hiv_metadata = T))
+loc.table <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/location_table.csv'))
 
 ### Code
 ## Read in spectrum object, sub in GBD parameters
@@ -56,12 +56,7 @@ dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub,
                        pop.sub, anc.sub, anc.backcast, prev.sub, art.sub, sexincrr.sub, popadjust, age.prev)
 
 ## Fit model
-if(age.prev){
-  ## fit_incrr allows for specifying functional form of fit to age-specific prevalence data
-  fit <- fitmod(dt, eppmod = 'rspline', rw_start = 2010, B0=1e4, B=1e3, opt_iter=1:2*5, fit_incrr = 'linincrr')
-}else{
-  fit <- fitmod(dt, eppmod = 'rspline', rw_start = 2010, B0=1e4, B=1e3, opt_iter=1:2*5)
-}
+fit <- fitmod(dt, eppmod = 'rhybrid', rw_start = 2010, B0=1e4, B=1e3, opt_iter=1:2*5, fit_incrr = 'linincrr')
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)
