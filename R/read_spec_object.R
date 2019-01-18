@@ -78,7 +78,7 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
     }
     # ART
     ##TODO: Why are props so low?
-    prop.path <- paste0(root, "KEN_ART_props.csv")
+    prop.path <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/data/prepped/KEN_ART_props.csv")
     prop.dt <- fread(prop.path)
     prop <- prop.dt[ihme_loc_id == loc, prop_pepfar]
     attr(dt,"specfp")$art15plus_num <- attr(dt,"specfp")$art15plus_num * prop
