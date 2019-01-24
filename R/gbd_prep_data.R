@@ -1,10 +1,6 @@
 find_pjnz <- function(loc){
   if(grepl("KEN", loc) & loc.table[ihme_loc_id == loc, level] == 5) {
-    if(loc.table[ihme_loc_id == loc, parent_id] == 44797) {
-      temp.loc <- "KEN_44795" # This is because the North Eastern province doesn't have an XML file
-    } else {
       temp.loc <- loc.table[location_id == loc.table[ihme_loc_id == loc, parent_id], ihme_loc_id]
-    }
   } else if(grepl('ZAF', loc)){
     temp.loc <- 'ZAF'
   } else {

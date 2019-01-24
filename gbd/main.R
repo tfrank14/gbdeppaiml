@@ -17,7 +17,7 @@ if(length(args) > 0) {
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
 } else {
 	run.name <- "190117_group1_agesex"
-	loc <- "MWI"
+	loc <- "NGA_25318"
 	stop.year <- 2020
 	i <- 1
 }
@@ -35,6 +35,7 @@ anc.backcast <- TRUE
 age.prev <- TRUE
 popadjust <- FALSE
 plot.draw <- TRUE
+epp.mod <- 'rhybrid'
 
 
 ### Paths
@@ -55,13 +56,17 @@ loc.table <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/location_ta
 dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, 
                        pop.sub, anc.sub, anc.backcast, prev.sub, art.sub, sexincrr.sub, popadjust, age.prev)
 
+if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
+if(age.prev == TRUE){attr(dt, 'specfp')$fitincrr <- 'linincrr'}
 ## Fit model
-fit <- fitmod(dt, eppmod = 'rhybrid', rw_start = 2010, B0=1e4, B=1e3, opt_iter=1:2*5, fit_incrr = 'linincrr')
+fit <- fitmod(dt, eppmod = epp.mod, B0=2e5, B=1e3, fitincrr = 'linincrr', number_k = 50)
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)
 ## through the end of the projection period.
-fit <- extend_projection(fit, proj_years = stop.year - start.year)
+if(!epp.mod == 'rspline'){
+  fit <- extend_projection(fit, proj_years = stop.year - start.year)
+}
 
 ## Simulate model for all resamples, choose a random draw, get gbd outputs
 result <- gbd_sim_mod(fit)

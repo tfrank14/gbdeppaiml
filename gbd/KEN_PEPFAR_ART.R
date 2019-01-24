@@ -28,7 +28,7 @@ library(data.table); library(ggplot2)
 ### Paths
 pepfar.path <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/data/temp/KEN_PEPFAR_ART.csv")
 props.path <- "/share/hiv/epp_input/gbd19/190102_test2/art_prop.csv"
-out.path <- paste0("/share/hiv/epp_input/gbd19/190102_test2/KEN_ART_props.csv")
+out.path <- paste0("/share/hiv/epp_input/gbd19/KEN_ART_props.csv")
 
 ### Functions
 source(paste0(root, "Project/Mortality/shared/functions/get_locations.r"))

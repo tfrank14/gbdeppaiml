@@ -13,7 +13,7 @@ args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
 	run.name <- args[1]
 } else {
-	run.name <- paste0(substr(gsub("-","",Sys.Date()),3,8), "_backcast2")
+	run.name <- '190117_group1_agesex'
 }
 
 ### Paths
@@ -33,7 +33,7 @@ loc.table <- data.table(get_locations(hiv_metadata = T))
 gbd.locs <- loc.table$ihme_loc_id
 
 #bring in geospatial microdata data
-geos_dir <- paste0(root, "LIMITED_USE/LU_GEOSPATIAL/geo_matched/hiv_gbd/")
+geos_dir <- paste0("/ihme/limited_use/LIMITED_USE/LU_GEOSPATIAL/geo_matched/hiv_gbd/")
 versions <- grep("[[:digit:]]*\\.[[:digit:]]*\\.[[:digit:]]*", list.dirs(geos_dir, full.names=F), value=T)
 newest <- versions[which.max(as.Date(versions, format="%m.%d.%y"))]
 load(dir(paste0(geos_dir, newest), pattern=".Rdata", full.names=T)[1])
@@ -59,8 +59,20 @@ data3 <- rbind(data3, ind.copy)
 data3[,loc_year := paste0(iso3,"_",year)] 
 
 ## Nigeria
-# data3[grepl('NGA', iso3) & !is.na(admin_1_id), iso3 := admin_1_id]
-
+## TODO: Update Ubcov extraction to actually match admin_1_id
+ngadata <- data3[grepl('NGA', iso3)]
+data3 <- data3[!grepl('NGA', iso3)]
+ngadata[, temp := tolower(admin_1)]
+ngadata[, temp := paste0(toupper(substr(temp, 1, 1)), substr(temp, 2, length(temp)))]
+ngadata[temp %in% c('Cross river', 'Cross-river'), temp := 'Cross River']
+ngadata[temp %in% c('Fct abuja', 'Fct-abuja'), temp := 'FCT (Abuja)']
+ngadata[temp %in% c('Akwa-ibom', 'Akwa ibom'), temp := 'Akwa Ibom']
+nga.table <- loc.table[grepl('NGA_', ihme_loc_id),.(ihme_loc_id, temp = location_name)]
+ngadata <- merge(ngadata, nga.table, by = 'temp', all.x = T)
+ngadata[!is.na(temp), admin_1_id := ihme_loc_id]
+ngadata[!is.na(temp), iso3 := admin_1_id]
+ngadata[,c('temp', 'ihme_loc_id') := NULL]
+data3 <- rbind(data3, ngadata, use.names = T)
 
 #bring in report data (not extracted yet)
 supp.survey <- fread(supp.survey.path)[iso3 %in% gbd.locs & outlier == 0]
