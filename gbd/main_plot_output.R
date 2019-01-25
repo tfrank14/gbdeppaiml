@@ -14,9 +14,15 @@ print(args)
 if(length(args) > 0) {
   loc <- args[1]
   run.name <- args[2]
+  if(length(args) > 2){
+    compare.run <- args[3]
+  }else{
+      compare.run <- NA
+    }
 } else {
   loc <- "AGO"
-  run.name <- '190102_test2'
+  run.name <- '190117_group1_agesex'
+  compare.run <- '190102_test2'
 }
 ### Functions
 library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
@@ -28,9 +34,9 @@ devtools::load_all()
 loc.table <- get_locations(hiv_metadata = TRUE)
 
 dir.create(paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/15to49_plots/'), recursive = TRUE, showWarnings = FALSE)
-plot_15to49(loc, run.name)
+plot_15to49(loc, run.name, compare.run)
 
 for(c.indicator in c('Incidence', 'Prevalence', 'Deaths')){
   dir.create(paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/age_specific_plots/', c.indicator, '/'), recursive = TRUE, showWarnings = FALSE)
 }
-plot_age_specific(loc, run.name)
+plot_age_specific(loc, run.name, compare.run)

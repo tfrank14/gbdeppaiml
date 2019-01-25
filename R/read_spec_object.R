@@ -65,6 +65,11 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
     dt <- sub.art(dt,loc, use.recent.unaids = FALSE)
   }
   
+  if(sexincrr.sub){
+    print('Substiting sex incrr')
+    dt <- sub.sexincrr(dt, loc, i)
+  }
+  
   ## Subsetting KEN counties from province
   if(grepl('KEN', loc)){
     ken.anc.path <- paste0('/share/hiv/epp_input/gbd19/kenya_anc_map.csv')

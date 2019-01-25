@@ -488,47 +488,38 @@ sub.art <- function(dt, loc, use.recent.unaids = FALSE) {
   }
   
 
-   ##Find most recent file
-  art.file.path <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/extrapolate_ART/PV_testing/")
-  loc.files <- list.files(art.file.path,recursive = TRUE, pattern=loc)
-  unaids.files <- gsub("/.*","",loc.files[grep("UNAIDS_",loc.files)])
-  
-  if (length(unaids.files)>0){
-    recent <- max(gsub("UNAIDS_","", unaids.files))
-    art.path <- paste0(art.file.path,"/UNAIDS_", recent, "/", temp.loc, "_Adult_ART_cov.csv")
-    art.dt <- fread(art.path)
-    art.dt[is.na(art.dt)] <- 0
-    
-  
-    ##Need this to be logical later
-    art.dt[, type := ifelse(ART_cov_pct > 0, TRUE, FALSE)]	
-    
-    years <- as.integer(attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$year)
-   
-    if(max(years) > max(art.dt$year)) {
-      max.dt <- copy(art.dt[year == max(year)])
-      missing.years <- setdiff(years, art.dt$year)
-      add.dt <- rbindlist(lapply(missing.years, function(cyear) {
-        copy.dt <- copy(max.dt)
-        copy.dt[, year := cyear]
-      }))
-      art.dt <- rbind(art.dt, add.dt)
+  #Will need to update once we have 2018
+  for(c.year in c('UNAIDS_2017', 'UNAIDS_2016', 'UNAIDS_2015', '140520')){
+    art.path <-paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/extrapolate_ART/PV_testing/", c.year, "/", temp.loc, "_Adult_ART_cov.csv") 
+    if(file.exists(art.path)){
+      art.dt <- fread(art.path)
+      break;
     }
-    
-    attr(dt,"specfp")$art15plus_isperc[attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$sex=="Male"] <- art.dt[year %in% years & sex == 1, type]
-    attr(dt,"specfp")$art15plus_isperc[attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$sex=="Female"] <- art.dt[year %in% years & sex == 2, type]
-    
-    art.dt[, ART_cov_val := ifelse(ART_cov_pct > 0, ART_cov_pct, ART_cov_num)]
-    
-    ##DELETE THIS???
-    # scalar.path <- paste0("/share/hiv/adult_art_props/170617_hotsauce_high/data/", loc, ".csv")
-    # scalar.dt <- fread(scalar.path)
-    # epp.input$epp.art$m.val <- art.dt[year %in% years & sex == 1, ART_cov_val] * scalar.dt[year %in% years & sex == "male", prop]
-    # epp.input$epp.art$f.val <- art.dt[year %in% years & sex == 2, ART_cov_val] * scalar.dt[year %in% years & sex == "female", prop]
-    
-    attr(dt,"specfp")$art15plus_num[attr(attr(dt,"specfp")$art15plus_num,"dimnames")$sex=="Male"] <- art.dt[year %in% years & sex == 1, ART_cov_val]
-    attr(dt,"specfp")$art15plus_num[attr(attr(dt,"specfp")$art15plus_num,"dimnames")$sex=="Female"] <- art.dt[year %in% years & sex == 2, ART_cov_val]
-    
+  }
+  art.dt[is.na(art.dt)] <- 0
+  
+  ##Need this to be logical later
+  art.dt[, type := ifelse(ART_cov_pct > 0, TRUE, FALSE)]	
+  
+  #years <- epp.input$epp.art$year
+  years <- as.integer(attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$year)
+  
+  if(max(years) > max(art.dt$year)) {
+    max.dt <- copy(art.dt[year == max(year)])
+    missing.years <- setdiff(years, art.dt$year)
+    add.dt <- rbindlist(lapply(missing.years, function(cyear) {
+      copy.dt <- copy(max.dt)
+      copy.dt[, year := cyear]
+    }))
+    art.dt <- rbind(art.dt, add.dt)
+  }
+  attr(dt,"specfp")$art15plus_isperc[attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$sex=="Male"] <- art.dt[year %in% years & sex == 1, type]
+  attr(dt,"specfp")$art15plus_isperc[attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$sex=="Female"] <- art.dt[year %in% years & sex == 2, type]
+  
+  art.dt[, ART_cov_val := ifelse(ART_cov_pct > 0, ART_cov_pct, ART_cov_num)]
+  attr(dt,"specfp")$art15plus_num[attr(attr(dt,"specfp")$art15plus_num,"dimnames")$sex=="Male"] <- art.dt[year %in% years & sex == 1, ART_cov_val]
+  attr(dt,"specfp")$art15plus_num[attr(attr(dt,"specfp")$art15plus_num,"dimnames")$sex=="Female"] <- art.dt[year %in% years & sex == 2, ART_cov_val]
+  
     } else {
       
       print("No ART files for subsitution")
@@ -538,100 +529,12 @@ sub.art <- function(dt, loc, use.recent.unaids = FALSE) {
   return(dt)
 }
 
-
-##Sub incidence rate ratios - this seems to just be an extrapolation?
-# calc.expand.pop <- function(loc, sex.agg = T) {
-#   aim.dir <- paste0(root,"/WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/AIM_assumptions/")
-#   loc.id <- loc.table[ihme_loc_id==loc, location_id]
-#   
-#   ## Load central function
-#   if(!"get_age_map" %in% ls()) {
-#     source(paste0(root, "Project/Mortality/shared/functions/get_age_map.r"))
-#     age.table <- data.table(get_age_map("all"))
-#   }
-#   
-#   IRR2 <- fread(paste0(aim.dir, "sex_age_pattern/age_IRRs/Feb17/GEN_IRR.csv"))
-#   IRR2 <- IRR2[age < 55,]
-#   
-#   sex_IRR <- fread(paste0(aim.dir, "sex_age_pattern/FtoM_inc_ratio_epidemic_specific.csv"))
-#   sex_IRR <- sex_IRR[epidemic_class=="GEN",]
-#   sex_IRR[,year:=year+start.year-1]
-#   
-#   missing_years <- c()
-#   if (sex_IRR[,max(year)] < stop.year)
-#     missing_years <- (sex_IRR[,max(year)]+1):stop.year
-#   replace_IRR <- sex_IRR[order(year)][rep(nrow(sex_IRR), times=length(missing_years))]
-#   if (length(missing_years) > 0)
-#     replace_IRR[,year:=missing_years]
-#   sex_IRR <- rbind(sex_IRR, replace_IRR)
-#   
-#   sex_IRR[,sex:=2]
-#   
-#   male_IRR <- copy(sex_IRR)
-#   male_IRR[,FtoM_inc_ratio:=1.0]
-#   male_IRR[,sex:=1]
-#   
-#   sex_IRR <- rbind(sex_IRR, male_IRR)
-#   
-#   ## Read in population for age-sex structure for aggregation
-#   run.name <- "180614_numbat_KEN_fix"
-#   path <- paste0("/ihme/hiv/epp_output/gbd17/", run.name, "/populations/", loc.id, ".csv")
-#   if(file.exists(path)) {
-#     in.pop <- fread(path)[year_id %in% start.year:stop.year]
-#   } else {
-#     if(!"get_population" %in% ls()) {
-#       source(paste0(root, "temp/central_comp/libraries/current/r/get_population.R"))
-#     }
-#     in.pop <- get_population(age_group_id = 8:14, location_id = loc.id, sex_id = 1:2, decomp_step="step1", location_set_id = 21)
-#   }
-#   pop <- merge(in.pop, age.table[, .(age_group_id, age_group_name_short)], by = "age_group_id", all.x = T)
-#   setnames(pop, 
-#            c("year_id", "sex_id", "age_group_name_short", "population"),
-#            c("year", "sex", "age", "value")
-#   )
-#   pop[, (setdiff(names(pop), c("year", "sex", "age", "value"))) := NULL]
-#   
-# 
-#   pop$age <- strtoi(pop$age)
-#   pop[(age-5) %%  10 != 0, age:=as.integer(age-5)]
-#   pop[,value:=as.numeric(value)]
-#   
-#   pop1 <-data.table(aggregate(value ~ sex + age + year,pop,FUN=sum))[order(sex,age)]
-#   missing_years <- c()
-#   if (pop1[,max(year)] < stop.year)
-#     missing_years <- (pop1[,max(year)]+1):stop.year
-#   replace_pop <- pop1[rep(which(pop1[,year] == pop1[,max(year)]), times=length(missing_years))]
-#   replace_years <- rep(1:(stop.year-pop1[,max(year)]), each=length(which(pop1[,year] == pop1[,max(year)])))
-#   replace_pop[,year:=year+replace_years]
-#   pop1 <- rbind(pop1, replace_pop)
-#   IRR <- runif(16, IRR2$lower, IRR2$upper)
-#   IRR2[,IRR:=IRR]
-#   
-#   IRR2[,IRR:=IRR2[,IRR]/IRR2[age==25 & sex==1,IRR]]
-#   
-#   combined_IRR <- merge(sex_IRR, IRR2, by='sex', allow.cartesian=TRUE)
-#   combined_IRR[,comb_IRR := FtoM_inc_ratio * IRR]
-#   
-#   pop2 <- merge(pop1, combined_IRR, by=c('sex', 'age', 'year'))
-#   
-#   pop2[,wt:=comb_IRR*value]
-#   
-#   sex_agg <- pop2[,.(wt=sum(wt)),by=.(year, age)]
-#   
-#   total <- pop2[,.(total = sum(wt)),by=.(year)]
-#   pop2 <- merge(pop2, total, by=c('year'))
-#   pop2[,ratio:=wt/total]
-#   
-#   
-#   sex_agg <- merge(sex_agg, total, by=c('year'))
-#   sex_agg[,ratio:=wt/total]
-#   
-#   if(sex.agg) {
-#     out.pop <- sex_agg
-#   } else {
-#     out.pop <- pop2
-#   }
-#   
-#   return(out.pop)
-# }
-
+sub.sexincrr <- function(dt, loc, i){
+  rr.dt <- fread(paste0('/share/hiv/spectrum_input/FtoM_inc_ratio/', loc, '.csv'))
+  rr <- rr.dt[draw == i, FtoM_inc_ratio]
+  final.rr <- rr[length(rr)]
+  rr <- c(rr, rep(final.rr, length(start.year:stop.year) - length(rr)))
+  names(rr) <- start.year:stop.year
+  attr(dt, 'specfp')$incrr_sex <- rr
+  return(dt)
+}
