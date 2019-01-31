@@ -208,3 +208,48 @@ plot_age_specific <- function(loc, run.name, compare.run = NA){
     dev.off()
   }
 }
+
+plot_age_sex_incrr <- function(fit, dt){
+  ## Informative priors based on estimates for 11 countries with 3+ surveys
+  incrr_trend_mean <- c(0.0, 0.035, -0.02, -0.09, -0.016, -0.06)
+  incrr_trend_sd <- c(0.07, 0.07, 0.1, 0.1, 0.08, 0.08)
+  years <- 1970:2019  
+  ## Incidence rate ratios for age 50 plus, relative to 15-49
+  incrr_50plus_logdiff <- cbind(male   = log(0.493510) - log(c(0.358980, 0.282400, 0.259240, 0.264920, 0.254790, 0.164140, 0.000000)),
+                                female = log(0.440260) - log(c(0.336720, 0.239470, 0.167890, 0.146590, 0.171350, 0.000000, 0.000000)))
+  
+  theta.mat <- fit$resample
+  dt <- rbindlist(lapply(1:3000, function(i){
+    theta <- theta.mat[i,]
+    par <- theta[27:32]
+
+    sexadjust <- approx(c(2002, 2007, 2012), c(-5, 0, 5)*c(par[1], 0, par[2]), years, rule=2)$y
+    
+    ## adjustment to age IRRs among 15-24
+    m15to24_adjust <- approx(c(2002, 2007, 2012), c(-5, 0, 5)*c(par[3], 0, par[4]), years, rule=2)$y
+    f15to24_adjust <- approx(c(2002, 2007, 2012), c(-5, 0, 5)*c(par[5], 0, par[6]), years, rule=2)$y
+    return(data.table(year = years, sexadjust = sexadjust, m15to24 = m15to24_adjust, f15to24 = f15to24_adjust))
+  }))
+  dt <- melt(dt, id.vars= 'year')
+  dt <- dt[,.(mean = mean(value), upper = quantile(value, 0.975), lower = quantile(value, 0.025)), by = c('variable', 'year')]
+  
+  par <- incrr_trend_mean
+  sexadjust <- approx(c(2002, 2007, 2012), c(-5, 0, 5)*c(par[1], 0, par[2]), years, rule=2)$y
+  
+  ## adjustment to age IRRs among 15-24
+  m15to24_adjust <- approx(c(2002, 2007, 2012), c(-5, 0, 5)*c(par[3], 0, par[4]), years, rule=2)$y
+  f15to24_adjust <- approx(c(2002, 2007, 2012), c(-5, 0, 5)*c(par[5], 0, par[6]), years, rule=2)$y
+  prior.dt <- data.table(year = years, sexadjust = sexadjust, m15to24 = m15to24_adjust, f15to24 = f15to24_adjust)
+  prior.dt <- melt(prior.dt, id.vars= 'year')
+  
+  pdf(paste0('/ihme/hiv/epp_output/gbd19/', run.name, "/", loc, '/ageincrr.pdf'), width = 10, height = 6)  
+  gg <- ggplot(dt) + 
+    geom_line(data = dt, aes(x = year, y = mean)) + 
+    geom_line(data = prior.dt, aes(x = year, y = value), linetype = 'dashed', alpha = 0.2) +
+    geom_ribbon(data = dt, aes(x = year, ymin = lower, ymax = upper), alpha = 0.5) + 
+    facet_wrap(~variable, scales = 'free') +
+    ggtitle(paste0(loc.table[ihme_loc_id == loc, plot_name], ' Age/Sex INCRR Priors and Posteriors')) +
+    theme_bw()
+  print(gg)
+  dev.off()
+}

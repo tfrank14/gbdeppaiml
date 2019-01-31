@@ -22,11 +22,11 @@ args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
     run.name <- args[1]
 } else {
-    run.name <- "190102_test2"
+    run.name <- "190129_rspline_1549dat"
 }
 
 ### Paths
-surv.path <- paste0("/share/hiv/epp_output/gbd19/prev_surveys.csv")
+surv.path <- paste0("/share/hiv/epp_output/gbd19/", run.name, "/prev_surveys.csv")
 
 pop.dir <- paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/population_single_age/india_splitting_locs/")
 
@@ -96,7 +96,7 @@ print(gg)
 dev.off()
 
 ## Add Kenya
-prop.path <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/data/prepped/KEN_ART_props.csv")
+prop.path <- paste0("/share/hiv/epp_input/gbd19/KEN_ART_props.csv")
 prop.dt <- fread(prop.path)
 ken.prop <- prop.dt[, .(ihme_loc_id, prop_pepfar)]
 setnames(ken.prop, "prop_pepfar", "prop")

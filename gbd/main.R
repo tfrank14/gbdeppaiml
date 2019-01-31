@@ -16,9 +16,9 @@ if(length(args) > 0) {
   stop.year <- as.integer(args[3])
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
 } else {
-	run.name <- "190117_group1_agesex"
-	loc <- "NGA_25318"
-	stop.year <- 2020
+	run.name <- "190129_rspline_1549dat"
+	loc <- "IND_4843"
+	stop.year <- 2019
 	i <- 1
 }
 
@@ -32,10 +32,10 @@ prev.sub <- TRUE
 sexincrr.sub <- TRUE
 # anc.prior <- FALSE
 anc.backcast <- TRUE
-age.prev <- TRUE
+age.prev <- FALSE
 popadjust <- FALSE
 plot.draw <- TRUE
-epp.mod <- 'rhybrid'
+epp.mod <- 'rspline'
 
 
 ### Paths
@@ -55,17 +55,17 @@ loc.table <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/location_ta
 ## Read in spectrum object, sub in GBD parameters
 dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, 
                        pop.sub, anc.sub, anc.backcast, prev.sub, art.sub, sexincrr.sub, popadjust, age.prev)
-
+if(grepl('IND', loc)){attr(dt, 'specfp')$prior_args <- list(logiota.unif.prior = c(log(1e-14), log(0.000025)))}
 if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 if(age.prev == TRUE){attr(dt, 'specfp')$fitincrr <- 'linincrr'}
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0=2e5, B=1e3, fitincrr = 'linincrr', number_k = 50)
+fit <- fitmod(dt, eppmod = epp.mod, B0=2e5, B=1e3)
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)
 ## through the end of the projection period.
 if(!epp.mod == 'rspline'){
-  fit <- extend_projection(fit, proj_years = stop.year - start.year)
+  fit <- extend_projection(fit, proj_years = stop.year - start.year + 1)
 }
 
 ## Simulate model for all resamples, choose a random draw, get gbd outputs

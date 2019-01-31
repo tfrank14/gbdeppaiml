@@ -10,8 +10,9 @@ date <- substr(gsub("-","",Sys.Date()),3,8)
 library(data.table)
 
 ## Arguments
-run.name <- "190117_group1_agesex"
-proj.end <- 2020
+run.name <- "190129_rspline_1549dat"
+compare.run <- '190102_test2'
+proj.end <- 2019
 n.draws <- 100
 cluster.project <- "proj_hiv"
 
@@ -58,6 +59,7 @@ if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
   prop.job <- paste0("qsub -P ", cluster.project," -N eppasm_art_prop_", run.name," -hold_jid eppasm_prev_cache_", run.name, " ", 
                      "-e /share/temp/sgeoutput/", user, "/errors ",
                      "-o /share/temp/sgeoutput/", user, "/output ",
+                     "-hold_jid eppasm_prep_inputs_", run.name,',eppasm_prev_cache_', run.name,' ',
                      code.dir, "gbd/singR_shell.sh ", 
                     code.dir, "gbd/prep_art_props.R ", run.name)
   print(prop.job)
@@ -67,25 +69,25 @@ if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
 ## Launch EPP
 for(loc in loc.list) {
     ## Run EPPASM
-    epp.string <- paste0("qsub -P ", cluster.project, " -pe multi_slot 1 ", 
+    epp.string <- paste0("qsub -P ", cluster.project, " -pe multi_slot 1 ",
                          "-e /share/temp/sgeoutput/", user, "/errors ",
                          "-o /share/temp/sgeoutput/", user, "/output ",
                          "-N ", loc, "_eppasm ",
                          "-t 1:", n.draws, " ",
                          "-hold_jid eppasm_prep_inputs_", run.name," ",
-                         code.dir, "gbd/singR_shell.sh ", 
+                         code.dir, "gbd/singR_shell.sh ",
                          code.dir, "gbd/main.R ",
                          run.name, " ", loc, " ", proj.end)
     print(epp.string)
     system(epp.string)
-        
+
     ## Draw compilation
     draw.string <- paste0("qsub -P ", cluster.project, " -pe multi_slot 2 ",
                           "-e /share/temp/sgeoutput/", user, "/errors ",
                           "-o /share/temp/sgeoutput/", user, "/output ",
                           "-N ", loc, "_save_draws ",
                           "-hold_jid ", loc, "_eppasm ",
-                          code.dir, "gbd/singR_shell.sh ", 
+                          code.dir, "gbd/singR_shell.sh ",
                           code.dir, "gbd/compile_draws.R ",
                           run.name, " ", loc, ' ', n.draws, ' TRUE')
     print(draw.string)
@@ -99,7 +101,7 @@ for(loc in loc.list) {
                           "-hold_jid ", loc, "_save_draws ",
                           code.dir, "gbd/singR_shell.sh ", 
                           code.dir, "gbd/main_plot_output.R ",
-                          loc, " ", run.name)
+                          loc, " ", run.name, ' ', compare.run)
     print(plot.string)
     system(plot.string)
 }
@@ -110,7 +112,7 @@ for(loc in loc.list) {
                         "-e /share/temp/sgeoutput/", user, "/errors ",
                         "-o /share/temp/sgeoutput/", user, "/output ",
                         "-N ", "compile_plots_eppasm ",
-                        "-hold_jid ", plot.holds, " ",
+                        # "-hold_jid ", plot.holds, " ",
                         code.dir, "gbd/singR_shell.sh ", 
                         code.dir, "gbd/compile_plots.R ",
                         run.name)

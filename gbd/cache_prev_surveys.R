@@ -13,7 +13,7 @@ args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
 	run.name <- args[1]
 } else {
-	run.name <- '190117_group1_agesex'
+	run.name <- '190129_rspline_1549dat'
 }
 
 ### Paths
@@ -32,8 +32,9 @@ loc.table <- data.table(get_locations(hiv_metadata = T))
 ## GBD locs
 gbd.locs <- loc.table$ihme_loc_id
 
-#bring in geospatial microdata data
-geos_dir <- paste0("/ihme/limited_use/LIMITED_USE/LU_GEOSPATIAL/geo_matched/hiv_gbd/")
+#bring in geospatial microdata
+##TODO update to newest geospatial surveys
+geos_dir <- paste0("/ihme/limited_use/LIMITED_USE/LU_GEOSPATIAL/geo_matched/hiv_gbd/Archive/")
 versions <- grep("[[:digit:]]*\\.[[:digit:]]*\\.[[:digit:]]*", list.dirs(geos_dir, full.names=F), value=T)
 newest <- versions[which.max(as.Date(versions, format="%m.%d.%y"))]
 load(dir(paste0(geos_dir, newest), pattern=".Rdata", full.names=T)[1])

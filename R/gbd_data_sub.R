@@ -520,12 +520,6 @@ sub.art <- function(dt, loc, use.recent.unaids = FALSE) {
   attr(dt,"specfp")$art15plus_num[attr(attr(dt,"specfp")$art15plus_num,"dimnames")$sex=="Male"] <- art.dt[year %in% years & sex == 1, ART_cov_val]
   attr(dt,"specfp")$art15plus_num[attr(attr(dt,"specfp")$art15plus_num,"dimnames")$sex=="Female"] <- art.dt[year %in% years & sex == 2, ART_cov_val]
   
-    } else {
-      
-      print("No ART files for subsitution")
-     
-    }
-  
   return(dt)
 }
 
