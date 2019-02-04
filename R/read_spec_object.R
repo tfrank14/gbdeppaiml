@@ -90,6 +90,10 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
     attr(dt,"specfp")$art15plus_num <- attr(dt,"specfp")$art15plus_num * prop
   }
     
+  if(paediatric){
+    dt <- sub.paeds(dt)
+  }
+  
     return(dt)
     
     

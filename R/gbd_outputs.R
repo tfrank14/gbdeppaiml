@@ -17,7 +17,7 @@
 #'
 #' @export
 
-gbd_sim_mod <-  function(fit, rwproj=fit$fp$eppmod == "rspline"){
+gbd_sim_mod <-  function(fit, rwproj=fit$fp$eppmod == "rspline", VERSION = 'C'){
   fit$param <- lapply(seq_len(nrow(fit$resample)), function(ii) fnCreateParam(fit$resample[ii,], fit$fp))
 
   if(rwproj){
@@ -41,7 +41,7 @@ gbd_sim_mod <-  function(fit, rwproj=fit$fp$eppmod == "rspline"){
   }
   
   fp.list <- lapply(fit$param, function(par) update(fit$fp, list=par))
-  mod.list <- lapply(fp.list, simmod)
+  mod.list <- lapply(fp.list, simmod, VERSION = VERSION)
   return(mod.list)
 }
 
