@@ -10,8 +10,8 @@ date <- substr(gsub("-","",Sys.Date()),3,8)
 library(data.table)
 
 ## Arguments
-run.name <- "190129_rspline_1549dat"
-compare.run <- '190102_test2'
+run.name <- "190205_nobackcast_agesexdat"
+compare.run <- '190205_nobackcast_1549dat'
 proj.end <- 2019
 n.draws <- 100
 cluster.project <- "proj_hiv"
@@ -30,7 +30,7 @@ loc.table <- data.table(get_locations(hiv_metadata = T))
 
 ### Code
 epp.list <- sort(loc.table[epp == 1, ihme_loc_id])
-loc.list <- epp.list[!grepl('KEN_', epp.list) & !grepl('NGA_', epp.list)]
+loc.list <- epp.list[epp.list %in% c('COD', 'CAF', 'COG', 'MWI', 'TZA', 'DOM', 'ZWE', 'ZMB')]
 
 # Cache inputs
 if(!file.exists(paste0(input.dir, "population/"))) {
@@ -92,7 +92,7 @@ for(loc in loc.list) {
                           run.name, " ", loc, ' ', n.draws, ' TRUE')
     print(draw.string)
     system(draw.string)
-    
+
     ## Create aggregate and age-specific plots
     plot.string <- paste0("qsub -P ", cluster.project, " -pe multi_slot 2 ",
                           "-e /share/temp/sgeoutput/", user, "/errors ",

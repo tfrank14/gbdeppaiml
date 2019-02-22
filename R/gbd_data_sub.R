@@ -36,7 +36,7 @@ convert_paed_cd4 <- function(dt, agegr){
   return(dt)
 }
 
-sub.paeds <- function(dt, loc, start.year = 1970, stop.year = 2019){
+sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   dir <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/')
   years <- start.year:stop.year
   pop <- fread(paste0(dir, '/population_single_age/', loc, '.csv'))
@@ -56,13 +56,13 @@ sub.paeds <- function(dt, loc, start.year = 1970, stop.year = 2019){
     attr(dt, 'specfp')$paedtargetpop[,,i] <- pop.year
   }
   
-  prog <- fread('/share/hiv/epp_input/gbd19/paeds_testing/childProgParam.csv')
+  prog <- fread('/share/hiv/epp_input/gbd19/paeds/childProgParam.csv')
   progu5 <- prog[age %in% 0:4]
   progu5 <- convert_paed_cd4(progu5, 'u5')
   progu5 <- dcast.data.table(progu5, cat + sex ~ age, value.var = 'value')
   progu5[,sex := ifelse(sex == 'male', 'Male', 'Female')]
-  attr(dt, 'specfp')$prog_u5 <- array(0, c(6, 15, 2))
-  dimnames(attr(dt, 'specfp')$prog_u5) <- list(cat = 1:6, age = 0:14, sex = c('Male', 'Female'))
+  attr(dt, 'specfp')$prog_u5 <- array(0, c(6, 5, 2))
+  dimnames(attr(dt, 'specfp')$prog_u5) <- list(cat = 1:6, age = 0:4, sex = c('Male', 'Female'))
   for(c.sex in c('Male', 'Female')){
     prog.mat <- progu5[sex == c.sex]
     prog.mat <- as.matrix(prog.mat[,c('cat', 'sex') := NULL])
@@ -82,7 +82,7 @@ sub.paeds <- function(dt, loc, start.year = 1970, stop.year = 2019){
     attr(dt, 'specfp')$prog_u15[,,c.sex] <- prog.mat
   }
   
-  mort.art <- fread('/share/hiv/epp_input/gbd19/paeds_testing/childMortOnART.csv')
+  mort.art <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/childMortOnART/', substr(loc, 1, 3), '.csv'))
   mort.art[category == 'LT6Mo', artdur := 'ART0MOS']
   mort.art[category == '6to12Mo', artdur := 'ART6MOS']
   mort.art[category == 'GT12Mo', artdur := 'ART1YR']
@@ -113,30 +113,33 @@ sub.paeds <- function(dt, loc, start.year = 1970, stop.year = 2019){
       attr(dt, 'specfp')$art_mort_u15[,,c.age,c.sex] <- mort.mat
     }
   }
-
-  mort.offart <- fread('/share/hiv/epp_input/gbd19/paeds_testing/childMortNoART.csv')
+  mort.offart <- fread('/share/hiv/epp_input/gbd19/paeds/childMortNoART.csv')
   mortu5 <- mort.offart[age %in% 0:4]
   mortu5 <- convert_paed_cd4(mortu5, 'u5')
   mortu5 <- dcast.data.table(mortu5, age + birth_category ~ cat, value.var = 'value')
-  attr(dt, 'specfp')$cd4_mort_u5 <- array(0, c(4, 7, 5))
-  dimnames(attr(dt, 'specfp')$cd4_mort_u5) <- list(birth_category = c("BF0", "BF12", "BF7", "perinatal"), cat = 1:7, age = paste0(0:4))
-  for(c.age in paste0(0:4)){
-      mort.mat <- mortu5[age == c.age]
-      mort.mat <- as.matrix(mort.mat[,c('birth_category', 'age') := NULL])
-      attr(dt, 'specfp')$cd4_mort_u5[,,c.age] <- mort.mat
+  attr(dt, 'specfp')$cd4_mort_u5 <- array(0, c(4, 7, 5, 2))
+  dimnames(attr(dt, 'specfp')$cd4_mort_u5) <- list(birth_category = c("BF0", "BF12", "BF7", "perinatal"), cat = 1:7, age = paste0(0:4), sex = c('Male', 'Female'))
+  for(c.sex in c('Male', 'Female')){
+    for(c.age in paste0(0:4)){
+        mort.mat <- mortu5[age == c.age]
+        mort.mat <- as.matrix(mort.mat[,c('birth_category', 'age') := NULL])
+        attr(dt, 'specfp')$cd4_mort_u5[,,c.age, c.sex] <- mort.mat
+    }
   }
   mortu15 <- mort.offart[age %in% 5:14]
   mortu15 <- convert_paed_cd4(mortu15, 'u15')
   mortu15 <- dcast.data.table(mortu15, age + birth_category ~ cat, value.var = 'value')
-  attr(dt, 'specfp')$cd4_mort_u15 <- array(0, c(4, 6, 10))
-  dimnames(attr(dt, 'specfp')$cd4_mort_u15) <- list(birth_category = c("BF0", "BF12", "BF7", "perinatal"), cat = 1:6, age = paste0(5:14))
-  for(c.age in paste0(5:14)){
-    mort.mat <- mortu15[age == c.age]
-    mort.mat <- as.matrix(mort.mat[,c('birth_category', 'age') := NULL])
-    attr(dt, 'specfp')$cd4_mort_u15[,,c.age] <- mort.mat
+  attr(dt, 'specfp')$cd4_mort_u15 <- array(0, c(4, 6, 10, 2))
+  dimnames(attr(dt, 'specfp')$cd4_mort_u15) <- list(birth_category = c("BF0", "BF12", "BF7", "perinatal"), cat = 1:6, age = paste0(5:14), sex = c('Male', 'Female'))
+  for(c.sex in c('Male', 'Female')){
+    for(c.age in paste0(5:14)){
+      mort.mat <- mortu15[age == c.age]
+      mort.mat <- as.matrix(mort.mat[,c('birth_category', 'age') := NULL])
+      attr(dt, 'specfp')$cd4_mort_u15[,,c.age, c.sex] <- mort.mat
+    }
   }
   
-  art <- fread('/share/hiv/epp_input/gbd19/paeds_testing/childARTcoverage.csv')
+  art <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/childARTcoverage/', loc, '.csv'))
   art[,art_isperc := ifelse(ART_cov_pct > 0, TRUE, FALSE)]
   art[,cotrim_isperc := ifelse(Cotrim_cov_pct > 0, TRUE, FALSE)]
   artpaed <- art[,ART_cov_num]
@@ -152,7 +155,7 @@ sub.paeds <- function(dt, loc, start.year = 1970, stop.year = 2019){
   names(cotrim_isperc) <- art$year
   attr(dt, 'specfp')$cotrim_isperc <- cotrim_isperc
   
-  artdist <- fread('/share/hiv/epp_input/gbd19/paeds_testing/childARTDist.csv')
+  artdist <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/childARTDist/', substr(loc, 1, 3), '.csv'))
   artdist <- artdist[year %in% years]
   artdist <- extend.years(artdist, years)
   artdist <- dcast.data.table(artdist, year~age)
@@ -162,7 +165,7 @@ sub.paeds <- function(dt, loc, start.year = 1970, stop.year = 2019){
   colnames(artdist) <- 0:14
   attr(dt, 'specfp')$paed_artdist <- artdist
   
-  artelig <- fread('/share/hiv/epp_input/gbd19/paeds_testing/childARTeligibility.csv')
+  artelig <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/childARTeligibility/', substr(loc, 1, 3), '.csv'))
   artelig <- artelig[year %in% years]
   artelig <- extend.years(artelig, years)  
   artelig[age == 'LT11mos', age_start := 0]
@@ -177,7 +180,7 @@ sub.paeds <- function(dt, loc, start.year = 1970, stop.year = 2019){
   names(infdist) <- 1:7
   attr(dt, 'specfp')$paed_distnewinf <- infdist
   
-  pmtct <- fread('/share/hiv/epp_input/gbd19/paeds_testing/PMTCT.csv')
+  pmtct <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/PMTCT/', loc, '.csv'))
   pmtct <- pmtct[year %in% years]
   pmtct <- extend.years(pmtct, years)
   pmtct_num <- data.table(year = years)
@@ -191,6 +194,50 @@ sub.paeds <- function(dt, loc, start.year = 1970, stop.year = 2019){
   }
   attr(dt, 'specfp')$pmtct_num <- data.frame(pmtct_num)
   attr(dt, 'specfp')$pmtct_isperc <- data.frame(pmtct_isperc)
+  
+  dropout <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/PMTCTdropoutRates.csv'))
+  attr(dt, 'specfp')$pmtct_dropout <- data.frame(dropout)
+  ##TODO - need to fix perc bf
+  percbf <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/percentBF/', substr(loc, 1, 3), '.csv'))
+  attr(dt, 'specfp')$perc_bf_on_art <- percbf[,on_arv]
+  attr(dt, 'specfp')$perc_bf_off_art <- percbf[,no_arv]
+  mtctrans <- fread('/share/hiv/epp_input/gbd19/paeds/PMTCT_transmission_rts_2016.csv')
+  attr(dt, 'specfp')$MTCtrans <- data.frame(mtctrans)
+  childCTXeffect <- fread('/share/hiv/epp_input/gbd19/paeds/Child_treatment_effects_cotrim.csv')
+  childCTXeffect <- childCTXeffect[year_fm_start %in% 1:5,.(hivmort_reduction = mean(hivmort_reduction)), by = 'ART_status']
+  attr(dt, 'specfp')$childCTXeffect <- childCTXeffect
+  
+  ## Survival
+  surv <- fread(paste0('/share/gbd/WORK/02_mortality/03_models/5_lifetables/results/hivfree_sx/locs/', loc, '_life_tables.csv'))
+  surv <- melt(surv, id.vars = c('sex', 'year', 'age'))
+  surv[, variable := as.integer(gsub('px', '', variable))]
+  surv <- surv[variable == k]
+  surv[,variable := NULL]
+  surv[sex == 'male', sex := 'Male']
+  surv[sex == 'female', sex := 'Female']
+  surv <- dcast.data.table(surv, year + age ~ sex)
+  surv = extend.years(surv, years)
+  surv <- surv[age %in% 0:14]
+  attr(dt, 'specfp')$paed_Sx <- array(0, c(15, 2, length(years)))
+  for(i in 1:length(years)){
+    sx.year = as.matrix(surv[year == as.integer(years[i]), .(Male, Female)])
+    rownames(sx.year) <- 0:14
+    attr(dt, 'specfp')$paed_Sx[,,i] <- sx.year
+  }
+  
+  ## Migration
+  mig <- fread(paste0(dir, '/migration/', loc, '.csv'))
+  setnames(mig, 'sex', 'sex_id')
+  mig <- mig[age %in% 0:14]
+  mig[, sex := ifelse(sex_id == 1, 'Male', 'Female')]
+  mig <- dcast.data.table(mig[,.(year, age, value, sex)], year + age ~ sex)
+  mig <- extend.years(mig, years)
+  attr(dt, 'specfp')$paed_mig <- array(0, c(15, 2, length(years)))
+  for(i in 1:length(years)){
+    mig.year = as.matrix(mig[year == as.integer(years[i]), .(Male, Female)])
+    rownames(mig.year) <- 0:14
+    attr(dt, 'specfp')$paed_mig[,,i] <- mig.year
+  }  
   
   return(dt)
 }
@@ -704,7 +751,11 @@ sub.art <- function(dt, loc, use.recent.unaids = FALSE) {
 }
 
 sub.sexincrr <- function(dt, loc, i){
-  rr.dt <- fread(paste0('/share/hiv/spectrum_input/FtoM_inc_ratio/', loc, '.csv'))
+  if(!grepl('IND', loc)){
+    rr.dt <- fread(paste0('/share/hiv/spectrum_input/FtoM_inc_ratio/', substr(loc, 1, 3), '.csv'))
+  }else{
+    rr.dt <- fread(paste0('/share/hiv/spectrum_input/FtoM_inc_ratio/', loc, '.csv'))
+  }
   rr <- rr.dt[draw == i, FtoM_inc_ratio]
   final.rr <- rr[length(rr)]
   rr <- c(rr, rep(final.rr, length(start.year:stop.year) - length(rr)))

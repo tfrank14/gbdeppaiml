@@ -16,31 +16,29 @@ if(length(args) > 0) {
   stop.year <- as.integer(args[3])
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
 } else {
-	run.name <- "190205_nobackcast_1549dat"
-	loc <- "HTI"
+	run.name <- "190129_rspline_1549dat"
+	loc <- "MWI"
 	stop.year <- 2019
 	i <- 1
 }
 
-run.table <- fread('/share/hiv/epp_input/gbd19/eppasm_run_table.csv')
-c.args <- run.table[run_name==run.name]
 ### Arguments
-## Some arguments are likely to stay constant across runs, others we're more likely to test different options.
-## The arguments that are more likely to vary are pulled from the eppasm run table
 start.year <- 1970
 trans.params.sub <- TRUE
 pop.sub <- TRUE
 art.sub <- TRUE
+anc.sub <- FALSE
 prev.sub <- TRUE
 sexincrr.sub <- TRUE
+# anc.prior <- FALSE
+anc.backcast <- FALSE
+age.prev <- TRUE
+popadjust <- FALSE
 plot.draw <- TRUE
+anc.rt <- FALSE
+epp.mod <- 'rspline'
 paediatric <- FALSE
-anc.sub <- c.args[['anc_sub']]
-anc.backcast <- c.args[['anc_backcast']]
-age.prev <- c.args[['age_prev']]
-popadjust <- c.args[['popadjust']]
-anc.rt <- c.args[['anc_rt']]
-epp.mod <- c.args[['epp_mod']]
+
 
 ### Paths
 out.dir <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, "/", loc)
@@ -92,11 +90,6 @@ output.dt[,run_num := i]
 ## Write output to csv
 dir.create(out.dir, showWarnings = FALSE)
 write.csv(output.dt, paste0(out.dir, '/', i, '.csv'), row.names = F)
-## Write out theta for plotting posterior
-if(age.prev){
-  param <- data.table(theta = fit$resample[rand.draw,])
-  write.csv(param, paste0(out.dir,'/theta_', i, '.csv'), row.names = F)
-}
 if(plot.draw){
   plot_15to49_draw(loc, output.dt, attr(dt, 'eppd'), run.name)
 }
