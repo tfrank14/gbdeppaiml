@@ -175,31 +175,36 @@ plot_age_specific <- function(loc, run.name, compare.run = NA){
   
   ## Comparison run
   compare.dt.17 <- fread(paste0('/snfs1/WORK/04_epi/01_database/02_data/hiv/spectrum/summary/180702_numbat_combined/locations/', loc, '_spectrum_prep.csv'))
-  compare.dt.17 <- compare.dt.17[!age_group_id > 21 & !age_group_id < 6 & !sex_id == 3 & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == 'Rate']
-  age.map <- fread('/share/hiv/spectrum_prepped/age_map.csv')
-  compare.dt.17 <- merge(compare.dt.17, age.map[,.(age_group_id,age = age_group_name_short)], by = 'age_group_id')
+  compare.dt.17 <- compare.dt.17[!age_group_id >= 24 & !sex_id == 3 & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == 'Rate']
+  ## TODO - get age map in launch script
+  age.map <- get_age_map()
+  compare.dt.17 <- merge(compare.dt.17, age.map[,.(age_group_id,age = age_group_name_short)], by = 'age_group_id', all.x = T)
   compare.dt.17 <- compare.dt.17[,.(age, sex = ifelse(sex_id == 1, 'male', 'female'), type = 'line', year = year_id, 
                               indicator = measure, model = 'GBD2017', mean, lower, upper)]
   if(!is.na(compare.run)){
     compare.dt <- fread(paste0('/share/hiv/epp_output/gbd19/', compare.run, '/compiled/', loc, '.csv'))
     compare.dt <- get_summary(compare.dt)
-    compare.dt <- compare.dt[!age_group_id %in% c(24, 22) & !sex == 'both' & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == 'Rate',
+    compare.dt <- compare.dt[!age_group_id == 24 & !sex == 'both' & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == 'Rate',
                              .(age, sex, type = 'line', year, indicator = measure, model = compare.run, mean, lower, upper)]
   }else{compare.dt = NULL} 
   
   
   cur.dt <- fread(paste0('/share/hiv/epp_output/gbd19/', run.name, '/compiled/', loc, '.csv'))
   cur.dt <- get_summary(cur.dt)
-  cur.dt <- cur.dt[!age_group_id %in% c(24, 22) & !sex == 'both' & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == 'Rate',
+  cur.dt <- cur.dt[!age_group_id == 24 & !sex == 'both' & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == 'Rate',
                    .(age, sex, type = 'line', year, indicator = measure, model = run.name, mean, lower, upper)]
   
   both.dt <- rbind(data, compare.dt.17, compare.dt, cur.dt, use.names = T)
   both.dt[,model := factor(model)]
   color.list <- c('blue', 'red', 'green')
   names(color.list) <- c(run.name,  'GBD2017', compare.run)
-  both.dt <- both.dt[!age %in% c(5,10),]
-  ## TODO: age_group_name rather than age?
-  both.dt[,age := factor(age, levels=paste0(seq(15, 80, 5)))]
+  if(!0 %in% both.dt$age){
+    both.dt <- both.dt[!age %in% c(5,10),]
+    both.dt[,age := factor(age, levels=paste0(seq(15, 80, 5), 'All Ages'))]
+  }else{
+    both.dt[,age := factor(age, levels=c('enn', 'lnn', 'pnn', '1', paste0( seq(5, 80, 5)), 'All Ages'))]
+  }
+
   both.dt <- both.dt[year <= 2019]
 
    for(c.indicator in c('Incidence', 'Prevalence', 'Deaths')){

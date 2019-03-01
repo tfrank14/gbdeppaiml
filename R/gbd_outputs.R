@@ -41,14 +41,17 @@ gbd_sim_mod <-  function(fit, rwproj=fit$fp$eppmod == "rspline", VERSION = 'C'){
   }
   
   fp.list <- lapply(fit$param, function(par) update(fit$fp, list=par))
+  ## We only need 1 draw, so let's save time and subset to that now
+  rand.draw <- round(runif(1, min = 1, max = 3000))
+  fp.list <- fp.list[rand.draw]
   mod.list <- lapply(fp.list, simmod, VERSION = VERSION)
   return(mod.list)
 }
 
 
-get_gbd_outputs <- function(mod, fp) {
+get_gbd_outputs <- function(mod, fp, paediatric = FALSE) {
 
-  mod <- mod_dimnames(mod, fp$ss)
+  mod <- mod_dimnames(mod, fp$ss, paediatric)
   hp1 <- hivpop_singleage(mod, fp$ss)
   
   pop <- as.data.frame.table(apply(mod, c(1, 2, 4), sum), responseName = "pop")
@@ -79,9 +82,10 @@ get_gbd_outputs <- function(mod, fp) {
   v <- merge(v, new_hiv, all.x=TRUE)
   v <- merge(v, pop_neg, all.x=TRUE)
   v <- merge(v, total_births, all.x=TRUE)
+  ## TODO figure out difference between hiv_births and pregprev ?!?
   v <- merge(v, pregprev, all.x=TRUE)
   v$hiv_births <- v$total_births * v$pregprev  # number of births to HIV positive women
-  v$birth_prev <- NA                           # HIV prevalence among newborns -- not yet output
+  v$birth_prev <- 0                         # HIV prevalence among newborns
   v <- merge(v, pop_art, all.x=TRUE)
   v <- merge(v, hivpop_daly, all.x=TRUE)
 
@@ -89,13 +93,75 @@ get_gbd_outputs <- function(mod, fp) {
   for(var in c('total_births', 'pregprev', 'hiv_births')){
     v[is.na(get(var)), (var) := 0.0]
   }
+  
   v[,year := as.numeric(levels(year))[year]]
   v[,sex := as.character(sex)]
   v[,age := as.numeric(levels(age))[age]]
+  if(paediatric){
+    hivdeathsu15 <- de_factor(as.data.frame.table(attr(mod, 'hivdeathsu15'), responseName = 'hiv_deaths'))
+    deathsu15 <- de_factor(as.data.frame.table(attr(mod, 'deathsu15'), responseName = 'non_hiv_deaths'))
+    
+    artpopu5 <- as.data.frame.table(apply(attr(mod, 'artpopu5'), 2:4, sum), responseName = 'pop_art')
+    artpopu15 <- as.data.frame.table(apply(attr(mod, 'artpopu15'), 2:4, sum), responseName = 'pop_art')
+    artpop <- rbindlist(lapply(list(artpopu5, artpopu15), de_factor ))
+    
+    ## divide into approx adult cd4 groups
+    ## taken from spectrum
+    hivpop <- array(0, c(3, 15, 2, fp$ss$PROJ_YEARS))
+    hivpop[3,1:5,,] <- apply(attr(mod, 'hivpopu5')[6:7,,,], 2:4, sum) + (0.111 * attr(mod, 'hivpopu5')[5,,,])
+    hivpop[2,1:5,,] <- (0.8888 * attr(mod, 'hivpopu5')[5,,,]) + (0.2307 * attr(mod, 'hivpopu5')[4,,,])
+    hivpop[1,1:5,,] <- (0.7692 * attr(mod, 'hivpopu5')[4,,,]) + apply(attr(mod, 'hivpopu5')[1:3,,,], 2:4, sum)
+    hivpop[3,6:15,,] <- attr(mod, 'hivpopu15')[6,,,]
+    hivpop[2,6:15,,] <- attr(mod, 'hivpopu15')[5,,,]
+    hivpop[1,6:15,,] <- apply(attr(mod, 'hivpopu15')[1:4,,,], 2:4, sum)
+    dimnames(hivpop) <- list(cd4daly = c('pop_gt350', 'pop_200to350', 'pop_lt200'), age = 0:14, sex = c('male', 'female'), year = fp$ss$proj_start:(fp$ss$proj_start+fp$ss$PROJ_YEARS - 1))
+    hivpop <- data.table(as.data.frame.table(hivpop, responseName = 'value'))
+    hivpop <- de_factor(dcast.data.table(hivpop, age + sex + year ~ cd4daly, value.var = 'value'))
+    
+    popu5 <- as.data.frame.table(apply(attr(mod, 'popu5'), c(1, 2, 4), sum), responseName = 'pop')
+    popu15 <- as.data.frame.table(apply(attr(mod, 'popu15'), c(1, 2, 4), sum), responseName = 'pop')
+    pop <- rbindlist(lapply(list(popu5, popu15), de_factor ))
+    popneg <- array(0, c(15, 2, fp$ss$PROJ_YEARS))
+    popneg[1:5,,] <- attr(mod, 'popu5')[,,fp$ss$hivn.idx,]
+    popneg[6:15,,] <- attr(mod, 'popu15')[,,fp$ss$hivn.idx,]
+    dimnames(popneg )<- list(age = 0:14, sex = c('male', 'female'), year = fp$ss$proj_start:(fp$ss$proj_start+fp$ss$PROJ_YEARS - 1))
+    popneg <- de_factor(as.data.frame.table(popneg, responseName = 'pop_neg'))
+    
+    inf <- de_factor(as.data.frame.table(attr(mod, 'infectionsu15'), responseName = 'new_hiv'))
+    birthprev <- as.data.frame.table(attr(mod, 'birthprev'), responseName = 'birth_prev')
+    birthprev$age <- 0
+    birthprev <- data.table(rbind(birthprev, expand.grid(list(age = 1:14, sex = c('male', 'female'), year = fp$ss$proj_start:(fp$ss$proj_start+fp$ss$PROJ_YEARS - 1), birth_prev = 0))))
+    birthprev[,year:=as.numeric(levels(year))[year] ]
+    birthprev[,sex := as.character(sex)]
+    
+    vu15 <- merge(pop, hivdeathsu15)
+    vu15 <- merge(vu15, deathsu15)
+    vu15 <- merge(vu15, inf)
+    vu15 <- merge(vu15, popneg)
+    vu15$total_births <- 0
+    vu15$pregprev <- 0
+    vu15$hiv_births <- 0
+    vu15 <- merge(vu15, birthprev)
+    vu15 <- merge(vu15, artpop)
+    vu15 <- merge(vu15, hivpop)
+    v <- rbind(v, vu15, use.names = T)
+    
+    
+  }
+
   v <- v[order(year, sex, age)]
+  
   return(v)
 }
 
+## Quick convert factors
+de_factor <- function(dt){
+  dt <- data.table(dt)
+  dt[,year := as.numeric(levels(year))[year]]
+  dt[,sex := as.character(sex)]
+  dt[,age := as.numeric(levels(age))[age]]
+  return(dt)
+}
 
 #' Births by single age
 #' 
@@ -133,15 +199,73 @@ get_daly_hivpop <- function(hivpop1){
   v
 }
 
+## Under-5 splits using GBD 2017 methods
+## We probably don't want to do it this way in the long run, but just for the sake of comparison
+split_u5 <- function(dt){
+  pop <- fread(paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/population_splits/", loc, '.csv'))
+  u5.pop <- pop[age_group_id <= 5]
+  u5.pop[,pop_total := sum(population), by = c('sex_id', 'year_id')]
+  u5.pop[,pop_prop := population/sum(population), by = c('sex_id', 'year_id')]
+  ## props for incidence
+  u5.pop[age_group_id != 5, pop_prop_inc := pop_prop]
+  u5.pop[age_group_id == 5, pop_prop_inc := 0]  
+  u5.pop[,pop_prop_inc := pop_prop_inc/sum(pop_prop_inc), by = c('year_id', 'sex_id')]
+  ## props for death
+  u5.pop[age_group_id!=2 & age_group_id != 3,pop_prop_death:=pop_prop]
+  u5.pop[age_group_id==2 | age_group_id == 3,pop_prop_death:=0]
+  u5.pop[,pop_prop_death:=pop_prop_death/sum(pop_prop_death), by=list(sex_id,year_id)]
+  setnames(u5.pop, 'year_id', 'year')
+  u5.pop[,sex := ifelse(sex_id == 1, 'male', 'female')]
+  u5.pop <- u5.pop[,list(sex,year,age_group_id,pop_total,pop_prop,pop_prop_inc,pop_prop_death)]
+
+  spec_u5 <- merge(dt,u5.pop,by=c("year","sex"), allow.cartesian=T)
+  # Split all variables that can be split by population without age restrictions for 1-4 age cat
+  pop_weight_all <- function(x) return(x*spec_u5[['pop_prop']])
+  all_age_vars <- c("pop_neg","non_hiv_deaths","pop_lt200","pop_200to350","pop_gt350","pop_art","pop")
+  spec_u5[,(all_age_vars) := lapply(.SD,pop_weight_all),.SDcols=all_age_vars] 
+  
+  # Split incidence into NN categories only, and enforce 0 for 1-4
+  pop_weight_inc <- function(x) return(x*spec_u5[['pop_prop_inc']])
+  inc_vars <- c("new_hiv")
+  spec_u5[,(inc_vars) := lapply(.SD,pop_weight_inc),.SDcols=inc_vars] 
+  
+  # Split deaths into ENN and 1-4 age categories
+  pop_weight_death <- function(x) return(x*spec_u5[['pop_prop_death']])
+  death_vars <- c("hiv_deaths")
+  spec_u5[,(death_vars) := lapply(.SD,pop_weight_death),.SDcols=death_vars] 
+  
+  spec_u5[,c("pop_total","pop_prop","pop_prop_inc","pop_prop_death", "age") :=NULL]
+  spec_u5[age_group_id == 2, age := 'enn']
+  spec_u5[age_group_id == 3, age := 'lnn']
+  spec_u5[age_group_id == 4, age := 'pnn']
+  spec_u5[age_group_id == 5, age := '1']
+  spec_u5[, age_group_id := NULL]
+  return(spec_u5)
+  
+}
+
 get_summary <- function(output){
+  output[,age_5 := age - age%%5]
+  output <- output[,.(pop = sum(pop), hiv_deaths = sum(hiv_deaths), non_hiv_deaths = sum(non_hiv_deaths), new_hiv = sum(new_hiv), pop_neg = sum(pop_neg),
+                      total_births = sum(total_births), pregprev = sum(pregprev), hiv_births = sum(hiv_births), birth_prev = sum(birth_prev),
+                      pop_art = sum(pop_art), pop_gt350 = sum(pop_gt350), pop_200to350 = sum(pop_200to350), pop_lt200 = sum(pop_lt200)), by = c('age_5', 'sex', 'year', 'run_num')]
+  setnames(output, 'age_5', 'age')
+  output.u5 <- split_u5(output[age == 0])
+  output <- output[age != 0]
+  output <- rbind(output, output.u5, use.names = T)
   output[, hivpop := pop_art + pop_gt350 + pop_200to350 + pop_lt200]
   output[,c('pop_gt350', 'pop_200to350', 'pop_lt200', 'birth_prev', 'pop_neg', 'pregprev', 'hiv_births', 'total_births') := NULL]
   output.count <- melt(output, id.vars = c('age', 'sex', 'year', 'pop', 'run_num'))
   
   ##TODO: Write out age map in launch script
   age.map <- get_age_map()
-  age.spec <- age.map[age_group_id %in% 8:21,.(age_group_id, age = age_group_name_short)]
-  age.spec[, age := as.integer(age)]
+  if(!0 %in% cur.dt$age){
+    age.spec <- age.map[age_group_id %in% 8:21,.(age_group_id, age = age_group_name_short)]
+    age.spec[, age := as.integer(age)]
+  }else{
+    ## TODO - rather than 28, we should do enn/lnn/pnn
+    age.spec <- age.map[age_group_id %in% c(2:21),.(age_group_id, age = age_group_name_short)]
+  }
   output.count <- merge(output.count, age.spec, by = 'age')
   output.count[, age := NULL]
   

@@ -64,6 +64,13 @@ invisible(lapply(epp.locs, function(c.location_id) {
   write.csv(pop.15to49[location_id == c.location_id], paste0(out.dir, '/population_15to49/', c.iso, ".csv"), row.names = F)
 }))
 
+pop.splits <- get_population(age_group_id = c(2:5, 30:32, 235), location_id = epp.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step1')
+dir.create(paste0(out.dir, '/population_splits'), showWarnings = F)
+invisible(lapply(epp.locs, function(c.location_id) {
+  c.iso <- loc.table[location_id == c.location_id, ihme_loc_id]
+  write.csv(pop.splits[location_id == c.location_id], paste0(out.dir, '/population_splits/', c.iso, ".csv"), row.names = F)
+}))
+
 ## Migration
 ## TODO: migration filepath needs to be updated for GBD 2019
 mig <- fread(paste0('/ihme/fertilitypop/gbd_2017/population/modeling/popReconstruct/v96/best/net_migrants.csv'))

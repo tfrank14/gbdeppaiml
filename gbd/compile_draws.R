@@ -16,14 +16,15 @@ if(length(args) > 0) {
   n <- as.integer(args[3])
   draw.fill <- as.logical(args[4])
 } else {
-  run.name <- "190205_nobackcast_agesexdat"
+  run.name <- "190205_nobackcast_1549dat"
   loc <- "MWI"
-  n <- 100
+  n <- 1
   draw.fill <- TRUE
 }
 draw.path <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, "/", loc)
 draw.list <- list.files(draw.path)
 draw.list <- draw.list[grepl('.csv', draw.list) & !grepl('theta_', draw.list)]
+draw.list <- draw.list[gsub('.csv', '', draw.list) %in% 1:n]
 dt <- rbindlist(lapply(draw.list, function(draw){
   draw.dt <- fread(paste0(draw.path, '/', draw))
   

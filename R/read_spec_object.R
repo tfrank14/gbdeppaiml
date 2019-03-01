@@ -92,7 +92,7 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
     
   if(paediatric){
     print('Preparing paediatric module inputs')
-    dt <- sub.paeds(dt, loc, k)
+    dt <- sub.paeds(dt, loc, i)
   }
   
     return(dt)

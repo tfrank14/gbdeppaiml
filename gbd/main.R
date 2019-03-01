@@ -17,7 +17,7 @@ if(length(args) > 0) {
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
 } else {
 	run.name <- "190205_nobackcast_1549dat"
-	loc <- "HTI"
+	loc <- "MWI"
 	stop.year <- 2019
 	i <- 1
 }
@@ -34,7 +34,7 @@ art.sub <- TRUE
 prev.sub <- TRUE
 sexincrr.sub <- TRUE
 plot.draw <- TRUE
-paediatric <- FALSE
+paediatric <- TRUE
 anc.sub <- c.args[['anc_sub']]
 anc.backcast <- c.args[['anc_backcast']]
 age.prev <- c.args[['age_prev']]
@@ -68,7 +68,7 @@ if(!anc.rt){
   attr(dt, 'eppd')$ancrtcens <- NULL
 }
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0=2e5, B=1e3)
+fit <- fitmod(dt, eppmod = epp.mod, B0=1e3, B=1e2, number_k = 5)
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)
@@ -78,13 +78,12 @@ if(!epp.mod == 'rspline'){
 }
 
 ## Simulate model for all resamples, choose a random draw, get gbd outputs
-result <- gbd_sim_mod(fit)
+result <- gbd_sim_mod(fit, VERSION = 'R')[[1]]
 data.path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
 if(!file.exists(data.path)){
   save_data(loc, attr(dt, 'eppd'), run.name)
 }
-rand.draw <- round(runif(1, min = 1, max = 3000))
-output.dt <- get_gbd_outputs(result[[rand.draw]], attr(dt, 'specfp'))
+output.dt <- get_gbd_outputs(result, attr(dt, 'specfp'), paediatric = paediatric)
 ## TODO: Find out how to fix final year and make sure we're using midyear inputs and outputs
 output.dt <- output.dt[year %in% start.year:stop.year]
 output.dt[,run_num := i]
