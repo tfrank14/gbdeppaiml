@@ -198,7 +198,7 @@ plot_age_specific <- function(loc, run.name, compare.run = NA){
   both.dt[,model := factor(model)]
   color.list <- c('blue', 'red', 'green')
   names(color.list) <- c(run.name,  'GBD2017', compare.run)
-  if(!0 %in% both.dt$age){
+  if(!'enn' %in% both.dt$age){
     both.dt <- both.dt[!age %in% c(5,10),]
     both.dt[,age := factor(age, levels=paste0(seq(15, 80, 5), 'All Ages'))]
   }else{
@@ -233,6 +233,41 @@ plot_age_specific <- function(loc, run.name, compare.run = NA){
     }
     dev.off()
   }
+}
+
+plot_birthprev <- function(loc, run.name){
+  cur.dt <- fread(paste0('/share/hiv/epp_output/gbd19/', run.name, '/compiled/', loc, '.csv'))
+  cur.dt <- cur.dt[,.(birth_prev = sum(birth_prev), hiv_births = sum(hiv_births), total_births = sum(total_births)), by = 'year']
+  cur.dt[, model := run.name]
+  compare.dt <- fread(paste0('/share/hiv/spectrum_draws/180702_numbat_combined/compiled/stage_1/', loc, '_ART_data.csv'))
+  compare.dt <- compare.dt[,.(birth_prev = sum(birth_prev), hiv_births = sum(hiv_births), total_births = sum(total_births)), by = c('year', 'run_num')]
+  compare.dt <- compare.dt[,.(birth_prev = mean(birth_prev), hiv_births = mean(hiv_births), total_births = mean(total_births)), by = 'year']
+  compare.dt[, model := 'GBD 2017']
+  
+  plot.dt <- rbind(cur.dt, compare.dt, use.names = T)
+  plot.dt[, perinatal_transmission_rate := birth_prev/hiv_births]
+  plot.dt[,pregprev := hiv_births / total_births]
+  plot.dt[,birth_prev_rate := birth_prev/total_births]
+  plot.dt <- melt(plot.dt, id.vars = c('year', 'model'))
+  plot.dt[variable == 'total_births', variable := 'total births']
+  plot.dt[variable == 'perinatal_transmission_rate', variable := 'perinatal transmission rate']
+  plot.dt[variable == 'hiv_births', variable := 'births to HIV+ women']
+  plot.dt[variable == 'birth_prev', variable := 'prevalence at birth (count)']
+  plot.dt[variable == 'birth_prev_rate', variable := 'prevalence at birth (rate)']
+  plot.dt[variable == 'pregprev', variable := 'pregnant women prevalence (rate)']
+  
+  plot.dt[, variable_f := factor(variable, levels = c('total births', 'pregnant women prevalence (rate)', 'births to HIV+ women',
+                                                      'perinatal transmission rate', 'prevalence at birth (rate)', 'prevalence at birth (count)'))]
+  
+  dir.create(paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/paeds_plots/'), showWarnings = F)
+  pdf(paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/paeds_plots/', loc, '.pdf'), width = 10, height = 6)
+  gg <- ggplot()
+    gg <- gg + geom_line(data = plot.dt, aes(x = year, y = value, color = model))
+    gg <- gg + facet_wrap(~variable_f, scales = 'free')
+    gg <- gg + xlab("Year") + ylab("Mean") + ggtitle(paste0(loc.table[ihme_loc_id == loc, plot_name], ' EPPASM Births Results'))
+    gg <- gg + theme_bw()
+    print(gg)
+  dev.off()
 }
 
 plot_age_sex_incrr <- function(loc, run.name){

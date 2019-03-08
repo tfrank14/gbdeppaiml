@@ -43,9 +43,9 @@ gbd_sim_mod <-  function(fit, rwproj=fit$fp$eppmod == "rspline", VERSION = 'C'){
   fp.list <- lapply(fit$param, function(par) update(fit$fp, list=par))
   ## We only need 1 draw, so let's save time and subset to that now
   rand.draw <- round(runif(1, min = 1, max = 3000))
-  fp.list <- fp.list[rand.draw]
-  mod.list <- lapply(fp.list, simmod, VERSION = VERSION)
-  return(mod.list)
+  fp.list <- list(fp.list[[rand.draw]])
+  mod <- lapply(fp.list, simmod, VERSION = VERSION)[[1]]
+  return(mod)
 }
 
 
@@ -82,15 +82,15 @@ get_gbd_outputs <- function(mod, fp, paediatric = FALSE) {
   v <- merge(v, new_hiv, all.x=TRUE)
   v <- merge(v, pop_neg, all.x=TRUE)
   v <- merge(v, total_births, all.x=TRUE)
-  ## TODO figure out difference between hiv_births and pregprev ?!?
   v <- merge(v, pregprev, all.x=TRUE)
   v$hiv_births <- v$total_births * v$pregprev  # number of births to HIV positive women
+  v$pregprev <- NULL
   v$birth_prev <- 0                         # HIV prevalence among newborns
   v <- merge(v, pop_art, all.x=TRUE)
   v <- merge(v, hivpop_daly, all.x=TRUE)
 
   v <- data.table(v)
-  for(var in c('total_births', 'pregprev', 'hiv_births')){
+  for(var in c('total_births', 'hiv_births')){
     v[is.na(get(var)), (var) := 0.0]
   }
   
@@ -139,7 +139,6 @@ get_gbd_outputs <- function(mod, fp, paediatric = FALSE) {
     vu15 <- merge(vu15, inf)
     vu15 <- merge(vu15, popneg)
     vu15$total_births <- 0
-    vu15$pregprev <- 0
     vu15$hiv_births <- 0
     vu15 <- merge(vu15, birthprev)
     vu15 <- merge(vu15, artpop)

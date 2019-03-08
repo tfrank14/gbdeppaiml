@@ -16,7 +16,7 @@ if(length(args) > 0) {
   n <- as.integer(args[3])
   draw.fill <- as.logical(args[4])
 } else {
-  run.name <- "190205_nobackcast_1549dat"
+  run.name <- "190205_nobackcast_agesexdat"
   loc <- "MWI"
   n <- 1
   draw.fill <- TRUE

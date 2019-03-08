@@ -16,8 +16,8 @@ if(length(args) > 0) {
   stop.year <- as.integer(args[3])
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
 } else {
-	run.name <- "190205_nobackcast_1549dat"
-	loc <- "MWI"
+	run.name <- "190205_nobackcast_agesexdat"
+	loc <- "TZA"
 	stop.year <- 2019
 	i <- 1
 }
@@ -68,7 +68,7 @@ if(!anc.rt){
   attr(dt, 'eppd')$ancrtcens <- NULL
 }
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0=1e3, B=1e2, number_k = 5)
+fit <- fitmod(dt, eppmod = epp.mod, B0=1e4, B=1e3, number_k = 5)
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)
@@ -78,7 +78,7 @@ if(!epp.mod == 'rspline'){
 }
 
 ## Simulate model for all resamples, choose a random draw, get gbd outputs
-result <- gbd_sim_mod(fit, VERSION = 'R')[[1]]
+result <- gbd_sim_mod(fit, VERSION = 'R')
 data.path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
 if(!file.exists(data.path)){
   save_data(loc, attr(dt, 'eppd'), run.name)
