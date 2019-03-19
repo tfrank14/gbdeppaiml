@@ -11,9 +11,11 @@ args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
 	run.name <- args[1]
 	proj.end <- args[2]
+	run.group2 <- args[3]
 } else {
-	run.name <- "190102_test2"
+	run.name <- "190318_group2"
 	proj.end <- 2019
+	run.group2 <- TRUE
 }
 
 out.dir <- paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/")
@@ -27,7 +29,15 @@ source('/home/j/temp/central_comp/libraries/2019_gbd_env/r/get_covariate_estimat
 ## Locations
 loc.table <- get_locations(hiv_metadata = TRUE)
 write.csv(loc.table, paste0(out.dir, 'location_table.csv'), row.names = F)
-epp.locs <- loc.table[epp == 1, location_id]
+if(run.group2){
+  ## Prep inputs for all estimation locations
+  epp.locs <- loc.table[spectrum == 1, location_id]
+  
+}else{
+  ## Prep inputs for standard group 1 epp locations
+  epp.locs <- loc.table[epp == 1, location_id]
+}
+
 parent.locs <- loc.table[(grepl('IND', ihme_loc_id) & level < 5) | (grepl('KEN', ihme_loc_id) & level < 5) | ihme_loc_id %in% c('NGA', 'ETH', 'ZAF'), location_id]
 
 ## Population

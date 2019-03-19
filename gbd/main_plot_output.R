@@ -20,9 +20,9 @@ if(length(args) > 0) {
       compare.run <- NA
     }
 } else {
-  loc <- "AGO"
-  run.name <- '190117_group1_agesex'
-  compare.run <- '190102_test2'
+  loc <- "MWI"
+  run.name <- '190205_nobackcast_agesexdat'
+  compare.run <- NA
 }
 ### Functions
 library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
@@ -31,12 +31,19 @@ devtools::load_all()
 setwd(code.dir)
 devtools::load_all()
 
-loc.table <- get_locations(hiv_metadata = TRUE)
+loc.table <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/location_table.csv'))
 
+## 15-49 plots
 dir.create(paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/15to49_plots/'), recursive = TRUE, showWarnings = FALSE)
 plot_15to49(loc, run.name, compare.run)
 
+## Age-specific plots
 for(c.indicator in c('Incidence', 'Prevalence', 'Deaths')){
   dir.create(paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/age_specific_plots/', c.indicator, '/'), recursive = TRUE, showWarnings = FALSE)
 }
 plot_age_specific(loc, run.name, compare.run)
+
+## Birth prevalence
+dir.create(paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/paeds_plots/'), showWarnings = F)
+plot_birthprev(loc, run.name)
+

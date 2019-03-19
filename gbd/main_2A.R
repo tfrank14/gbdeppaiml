@@ -15,13 +15,11 @@ if(length(args) > 0) {
   loc <- args[2]
   stop.year <- as.integer(args[3])
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
-  paediatric <- as.logical(args[4])
 } else {
 	run.name <- "190205_nobackcast_agesexdat"
 	loc <- "MWI"
 	stop.year <- 2019
 	i <- 1
-	paediatric <- TRUE
 }
 
 run.table <- fread('/share/hiv/epp_input/gbd19/eppasm_run_table.csv')
@@ -36,6 +34,7 @@ art.sub <- TRUE
 prev.sub <- TRUE
 sexincrr.sub <- TRUE
 plot.draw <- TRUE
+paediatric <- TRUE
 anc.sub <- c.args[['anc_sub']]
 anc.backcast <- c.args[['anc_backcast']]
 age.prev <- c.args[['age_prev']]
@@ -65,7 +64,7 @@ if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 if(age.prev == TRUE){attr(dt, 'specfp')$fitincrr <- 'linincrr'}
 
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0=1e3, B=1e2, number_k  = 5)
+fit <- fitmod(dt, eppmod = epp.mod, B0=1e5, B=1e4)
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)
@@ -81,20 +80,13 @@ if(!file.exists(data.path)){
   save_data(loc, attr(dt, 'eppd'), run.name)
 }
 output.dt <- get_gbd_outputs(result, attr(dt, 'specfp'), paediatric = paediatric)
+## TODO: Find out how to fix final year and make sure we're using midyear inputs and outputs
+output.dt <- output.dt[year %in% start.year:stop.year]
 output.dt[,run_num := i]
 
 ## Write output to csv
 dir.create(out.dir, showWarnings = FALSE)
 write.csv(output.dt, paste0(out.dir, '/', i, '.csv'), row.names = F)
-
-## under-1 splits
-if(paediatric){
-  split.dt <- get_under1_splits(result, attr(dt, 'specfp'))
-  split.dt[,run_num := i]
-  write.csv(split.dt, paste0(out.dir, '/under_1_splits_', i, '.csv' ), row.names = F)
-}
-
-
 ## Write out theta for plotting posterior
 if(age.prev){
   param <- data.table(theta = fit$resample[rand.draw,])

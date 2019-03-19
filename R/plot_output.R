@@ -33,7 +33,7 @@ plot_15to49_draw <- function(loc, output, eppd, run.name, compare.run = '180702_
     compare.dt <- NULL
   }
   
-  cur.dt <- get_summary(output)
+  cur.dt <- get_summary(output, loc, run.name)
   cur.dt <- cur.dt[age_group_id == 24 & sex == 'both' & measure %in% c('Incidence', 'Prevalence') & metric == 'Rate',.(type = 'line', year, indicator = measure, model = run.name, mean, lower = NA, upper = NA)]
   
   if(un.comparison == TRUE) {
@@ -102,7 +102,7 @@ plot_15to49 <- function(loc, run.name, compare.run = NA, un.comparison = TRUE){
   
   if(!is.na(compare.run)){
     compare.dt <- fread(paste0('/share/hiv/epp_output/gbd19/', compare.run, '/compiled/', loc, '.csv'))
-    compare.dt <- get_summary(compare.dt)
+    compare.dt <- get_summary(compare.dt, loc, run.name)
     compare.dt <- compare.dt[age_group_id == 24 & sex == 'both' & measure %in% c('Incidence', 'Prevalence') & metric == "Rate",.(type = 'line', year, indicator = measure, model = compare.run, mean, lower, upper)]
   }else{compare.dt = NULL} 
   
@@ -126,7 +126,7 @@ plot_15to49 <- function(loc, run.name, compare.run = NA, un.comparison = TRUE){
     data[,c('agegr', 'sex') := NULL]
     data <- rbind(data, data.hhs, use.names = T)
   }
-  cur.dt <- get_summary(cur.dt)
+  cur.dt <- get_summary(cur.dt, loc, run.name)
   cur.dt <- cur.dt[age_group_id == 24 & sex == 'both' & measure %in% c('Incidence', 'Prevalence') & metric == "Rate",.(type = 'line', year, indicator = measure, model = run.name, mean, lower, upper)]
   
   if(un.comparison == TRUE) {
@@ -183,14 +183,14 @@ plot_age_specific <- function(loc, run.name, compare.run = NA){
                               indicator = measure, model = 'GBD2017', mean, lower, upper)]
   if(!is.na(compare.run)){
     compare.dt <- fread(paste0('/share/hiv/epp_output/gbd19/', compare.run, '/compiled/', loc, '.csv'))
-    compare.dt <- get_summary(compare.dt)
+    compare.dt <- get_summary(compare.dt, loc, run.name)
     compare.dt <- compare.dt[!age_group_id == 24 & !sex == 'both' & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == 'Rate',
                              .(age, sex, type = 'line', year, indicator = measure, model = compare.run, mean, lower, upper)]
   }else{compare.dt = NULL} 
   
   
   cur.dt <- fread(paste0('/share/hiv/epp_output/gbd19/', run.name, '/compiled/', loc, '.csv'))
-  cur.dt <- get_summary(cur.dt)
+  cur.dt <- get_summary(cur.dt, loc, run.name)
   cur.dt <- cur.dt[!age_group_id == 24 & !sex == 'both' & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == 'Rate',
                    .(age, sex, type = 'line', year, indicator = measure, model = run.name, mean, lower, upper)]
   
@@ -237,7 +237,8 @@ plot_age_specific <- function(loc, run.name, compare.run = NA){
 
 plot_birthprev <- function(loc, run.name){
   cur.dt <- fread(paste0('/share/hiv/epp_output/gbd19/', run.name, '/compiled/', loc, '.csv'))
-  cur.dt <- cur.dt[,.(birth_prev = sum(birth_prev), hiv_births = sum(hiv_births), total_births = sum(total_births)), by = 'year']
+  cur.dt <- cur.dt[,.(birth_prev = sum(birth_prev), hiv_births = sum(hiv_births), total_births = sum(total_births)), by = c('year', 'run_num')]
+  cur.dt <- cur.dt[,.(birth_prev = mean(birth_prev), hiv_births = mean(hiv_births), total_births = mean(total_births)), by = c('year')]
   cur.dt[, model := run.name]
   compare.dt <- fread(paste0('/share/hiv/spectrum_draws/180702_numbat_combined/compiled/stage_1/', loc, '_ART_data.csv'))
   compare.dt <- compare.dt[,.(birth_prev = sum(birth_prev), hiv_births = sum(hiv_births), total_births = sum(total_births)), by = c('year', 'run_num')]
@@ -259,7 +260,6 @@ plot_birthprev <- function(loc, run.name){
   plot.dt[, variable_f := factor(variable, levels = c('total births', 'pregnant women prevalence (rate)', 'births to HIV+ women',
                                                       'perinatal transmission rate', 'prevalence at birth (rate)', 'prevalence at birth (count)'))]
   
-  dir.create(paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/paeds_plots/'), showWarnings = F)
   pdf(paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/paeds_plots/', loc, '.pdf'), width = 10, height = 6)
   gg <- ggplot()
     gg <- gg + geom_line(data = plot.dt, aes(x = year, y = value, color = model))

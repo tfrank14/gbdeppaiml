@@ -2,7 +2,7 @@
 ## Output object is read to run through fitmod()
 read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.params.sub = TRUE, 
                              pop.sub = TRUE, anc.sub = TRUE, anc.backcast = TRUE, prev.sub = TRUE, art.sub = TRUE, sexincrr.sub = TRUE, 
-                             popadjust = TRUE, age.prev = FALSE, paediatric = FALSE
+                             popadjust = TRUE, age.prev = FALSE, paediatric = FALSE, anc.rt = FALSE
                              ){
   dt <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped/', loc, '.rds'))
   
@@ -93,6 +93,11 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
   if(paediatric){
     print('Preparing paediatric module inputs')
     dt <- sub.paeds(dt, loc, i)
+  }
+  if(!anc.rt){
+    attr(dt, 'eppd')$ancrtsite.prev <- NULL
+    attr(dt, 'eppd')$ancrtsite.n <- NULL
+    attr(dt, 'eppd')$ancrtcens <- NULL
   }
   
     return(dt)

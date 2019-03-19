@@ -10,10 +10,12 @@ date <- substr(gsub("-","",Sys.Date()),3,8)
 library(data.table)
 
 ## Arguments
-run.name <- "190205_nobackcast_agesexdat"
-compare.run <- '190205_nobackcast_1549dat'
+run.name <- "190318_group2"
+compare.run <- NA
 proj.end <- 2019
 n.draws <- 100
+run.group2 <- FALSE
+paediatric <- FALSE
 cluster.project <- "proj_hiv"
 
 ### Paths
@@ -38,7 +40,7 @@ if(!file.exists(paste0(input.dir, "population/"))) {
                       "-e /share/temp/sgeoutput/", user, "/errors ",
                       "-o /share/temp/sgeoutput/", user, "/output ",
                       code.dir, "gbd/singR_shell.sh ",
-                      code.dir, "gbd/gbd_prep_inputs.R"," ",run.name," ",proj.end)
+                      code.dir, "gbd/gbd_prep_inputs.R"," ",run.name," ",proj.end, " ", run.group2)
   print(prep.job)
   system(prep.job)
 }
@@ -89,7 +91,7 @@ for(loc in loc.list) {
                           "-hold_jid ", loc, "_eppasm ",
                           code.dir, "gbd/singR_shell.sh ",
                           code.dir, "gbd/compile_draws.R ",
-                          run.name, " ", loc, ' ', n.draws, ' TRUE')
+                          run.name, " ", loc, ' ', n.draws, ' TRUE ', paediatric)
     print(draw.string)
     system(draw.string)
 
