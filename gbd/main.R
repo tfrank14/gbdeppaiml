@@ -5,7 +5,7 @@ root <- ifelse(windows,"J:/","/home/j/")
 user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
 code.dir <- paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/gbdeppaiml/")
 ## Packages
-library(data.table); library(mvtnorm); library(survey); library(ggplot2)
+library(data.table); library(mvtnorm); library(survey); library(ggplot2); library(plyr)
 
 ## Arguments
 args <- commandArgs(trailingOnly = TRUE)
@@ -21,7 +21,7 @@ if(length(args) > 0) {
 	loc <- "MWI"
 	stop.year <- 2019
 	i <- 1
-	paediatric <- TRUE
+	paediatric <- FALSE
 }
 
 run.table <- fread('/share/hiv/epp_input/gbd19/eppasm_run_table.csv')
@@ -60,12 +60,12 @@ loc.table <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/location_ta
 ## Read in spectrum object, sub in GBD parameters
 dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, 
                        pop.sub, anc.sub, anc.backcast, prev.sub, art.sub, sexincrr.sub, popadjust, age.prev, paediatric, anc.rt)
-attr(dt, 'specfp')$prior_args <- list(logiota.unif.prior = c(log(1e-14), log(0.000025)))
+
 if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 if(age.prev == TRUE){attr(dt, 'specfp')$fitincrr <- 'linincrr'}
 
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0=1e3, B=1e2, number_k  = 5)
+fit <- fitmod(dt, eppmod = epp.mod, B0=1e2, B=1e2, number_k  = 5)
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)

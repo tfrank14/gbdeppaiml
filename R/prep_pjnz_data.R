@@ -66,6 +66,17 @@ prepare_spec_object <- function(loc, popadjust = TRUE, popupdate=TRUE, use_ep5=F
   return(val)
 }
 
+## For group 2 countries that have a PJNZ file
+prepare_spec_object_group2 <- function(loc){
+  pjnz <- find_pjnz(loc)[[1]]
+  fp <- prepare_directincid(pjnz)
+  
+  dt <- list()
+  attr(dt, 'specfp') <- fp
+  ## create eppd object in append.deaths() function later
+  return(dt)
+}
+
 prepare_spec_object_ind <- function(loc, start.year = 1970, stop.year = 2019, popadjust = TRUE){
   eppd <- prepare_eppd_ind(loc)
   demp <- create_spectrum_demog_param(loc, start.year, stop.year)

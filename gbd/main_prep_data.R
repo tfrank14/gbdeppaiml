@@ -14,7 +14,7 @@ print(args)
 if(length(args) > 0) {
   loc <- args[1]
 } else {
-  loc <- "IND_4873"
+  loc <- "NLD"
 }
 ### Functions
 library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
@@ -26,10 +26,14 @@ devtools::load_all()
 ### Tables
 loc.table <- data.table(get_locations(hiv_metadata = T))
 
-if(!grepl('IND', loc)){
-  val <- prepare_spec_object(loc)
+if(grepl('1', loc.table[ihme_loc_id == loc, group])){
+  if(!grepl('IND', loc)){
+    val <- prepare_spec_object(loc)
+  }else{
+    val <- prepare_spec_object_ind(loc)
+  }
 }else{
-  val <- prepare_spec_object_ind(loc)
+  val <- prepare_spec_object_group2(loc)
 }
 saveRDS(val, paste0('/share/hiv/data/PJNZ_EPPASM_prepped/', loc, '.rds'))
 

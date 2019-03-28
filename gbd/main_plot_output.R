@@ -21,7 +21,7 @@ if(length(args) > 0) {
     }
 } else {
   loc <- "MWI"
-  run.name <- '190205_nobackcast_agesexdat'
+  run.name <- '190205_backcast_1549dat'
   compare.run <- NA
 }
 ### Functions

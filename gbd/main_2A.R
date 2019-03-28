@@ -5,7 +5,7 @@ root <- ifelse(windows,"J:/","/home/j/")
 user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
 code.dir <- paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/gbdeppaiml/")
 ## Packages
-library(data.table); library(mvtnorm); library(survey); library(ggplot2)
+library(data.table); library(mvtnorm); library(survey); library(ggplot2); library(plyr)
 
 ## Arguments
 args <- commandArgs(trailingOnly = TRUE)
@@ -16,8 +16,8 @@ if(length(args) > 0) {
   stop.year <- as.integer(args[3])
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
 } else {
-	run.name <- "190205_nobackcast_agesexdat"
-	loc <- "MWI"
+	run.name <- "190318_group2"
+	loc <- "NLD"
 	stop.year <- 2019
 	i <- 1
 }
@@ -34,7 +34,7 @@ art.sub <- TRUE
 prev.sub <- TRUE
 sexincrr.sub <- TRUE
 plot.draw <- TRUE
-paediatric <- TRUE
+paediatric <- FALSE
 anc.sub <- c.args[['anc_sub']]
 anc.backcast <- c.args[['anc_backcast']]
 age.prev <- c.args[['age_prev']]

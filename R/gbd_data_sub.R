@@ -15,6 +15,56 @@ extend.years <- function(dt, years){
   return(dt)
 }
 
+append.deaths <- function(dt, loc, run.name){
+  deaths <- fread('/ihme/hiv/st_gpr/gpr_results.csv')
+  deaths <- deaths[location_id == loc.table[ihme_loc_id == loc, location_id] & age_group_id >= 8,.(year_id, age_group_id, sex_id, gpr_mean, gpr_var)]
+  ## Generate 1000 draws by location/year/age/sex
+  ## Need to use Delta Method to transform into real space before making draws
+  deaths[gpr_mean == 0,zero := 1]
+  deaths[gpr_mean != 0,gpr_var := ((1/gpr_mean)^2)*gpr_var]
+  deaths[gpr_mean != 0,gpr_sd := sqrt(gpr_var)]
+  deaths[gpr_var == 0, gpr_sd := 0]
+  deaths[gpr_mean != 0,gpr_mean := log(gpr_mean)]
+  
+  ## Take a draw from the logged mean/sd
+  sims <- deaths[,list(gpr_mean,gpr_sd)]
+  setnames(sims,c("mean","sd"))
+  sims <- data.table(mdply(sims,rnorm,n=1))
+  
+  ## Combine and reshape the results, then back-transform
+  deaths <- cbind(deaths,sims)
+  setnames(deaths, 'V1', 'value')
+  deaths[,c("mean","sd","gpr_mean","gpr_var","gpr_sd"):=NULL]
+  deaths[,value:=exp(value)/100] # Convert to real numbers then divide by 100 since the death rate is in rate per capita * 100
+  deaths[zero==1,value:=0]
+  deaths <- deaths[,list(year_id,age_group_id,sex_id,value)]
+  
+  pop <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/population/', loc, '.csv'))
+  pop.80plus <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/population_splits/', loc, '.csv'))
+  pop.80plus <- pop.80plus[age_group_id %in% c(30, 31, 32, 235)]
+  pop <- rbind(pop, pop.80plus, use.names = T)
+  deaths <- merge(deaths, pop, by = c('year_id', 'age_group_id', 'sex_id'))
+  deaths <- deaths[,.(value = value * population, year_id, sex_id, age_group_id)]
+  deaths[age_group_id >= 30, age_group_id := 21]
+  deaths <- deaths[,.(value = sum(value)), by = c('year_id', 'age_group_id', 'sex_id')]
+  
+  ## currently only fitting at sex-specific level
+  ## TODO work on age specific
+  deaths_dt <- deaths[,.(value = sum(value)), by = c('year_id', 'sex_id')]
+  backfill <- expand.grid(year_id = 1971:1980, sex_id = 1:2, value = 0)
+  deaths_dt <- rbind(backfill, deaths_dt)
+  vr <- reshape2::acast(deaths_dt, sex_id ~ year_id)
+  deaths_dt <- vr[ , match(rep(as.character(1971:2019), each = 10), colnames(vr))] / 10
+  
+  eppd <- list(vr = vr, 
+               country = 'Netherlands',
+               region = 'NLD',
+               projset_id = 0)
+  attr(dt, 'eppd') <- eppd
+  attr(dt, 'specfp')$deaths_dt <- deaths_dt
+  return(dt)
+}
+
 convert_paed_cd4 <- function(dt, agegr){
   if(agegr == 'u5'){
     dt[CD4 == 'GT30', cat := 1]
@@ -242,21 +292,28 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   return(dt)
 }
 
-sub.pop.params.demp <- function(demp, loc, k){
+sub.pop.params.specfp <- function(fp, loc, k){
   dir <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/')
 
   ## Population
-  years <- dimnames(demp$basepop)[[3]]
+  years <- start.year:stop.year
   pop <- fread(paste0(dir, '/population_single_age/', loc, '.csv'))
   pop <- extend.years(pop, years)
   pop[,age := ifelse(age_group_id == 28, 0, age_group_id - 48)]
-  pop <- pop[age %in% 0:80]
+  pop <- pop[age %in% 15:80]
   pop[, sex := ifelse(sex_id == 1, 'Male', 'Female')]
   pop <- dcast.data.table(pop[,.(age, sex, year, population)], age + year ~ sex, value.var = 'population')
+  fp$targetpop <- array(0, c(66, 2, length(years)))
+  dimnames(fp$targetpop) <- list(paste0(15:80), c('Male', 'Female'), years)
+  fp$basepop <- array(0, c(66, 2))
+  dimnames(fp$basepop) <- list(paste0(15:80), c('Male', 'Female'))
   for(i in 1:length(years)){
     pop.year <- as.matrix(pop[year == as.integer(years[i]),.(Male, Female)])
-    rownames(pop.year) <- 0:80
-    demp$basepop[,,i] <- pop.year
+    rownames(pop.year) <- 15:80
+    fp$targetpop[,,i] <- pop.year
+    if(i == 1){
+      fp$basepop <- pop.year
+    }
   }
   
   ## Survival
@@ -269,22 +326,24 @@ sub.pop.params.demp <- function(demp, loc, k){
   surv[sex == 'female', sex := 'Female']
   surv <- dcast.data.table(surv, year + age ~ sex)
   surv = extend.years(surv, years)
-  surv <- surv[age %in% 0:80]
+  surv <- surv[age %in% 15:80]
+  fp$Sx <- array(0, c(66, 2, length(years)))
+  dimnames(fp$Sx) <- list(paste0(15:80), c('Male', 'Female'), years)
   for(i in 1:length(years)){
     sx.year = as.matrix(surv[year == as.integer(years[i]), .(Male, Female)])
-    rownames(sx.year) <- 0:80
-    demp$Sx[,,i] <- sx.year
+    rownames(sx.year) <- 15:80
+    fp$Sx[,,i] <- sx.year
   }
   
   ## mx
-  mx <- surv
-  mx[, Female := -log(Female)]
-  mx[, Male := -log(Male)]
-  for(i in 1:length(years)){
-    mx.year = as.matrix(mx[year == as.integer(years[i]), .(Male, Female)])
-    rownames(mx.year) <- 0:80
-    demp$mx[,,i] <- sx.year
-  }
+  # mx <- surv
+  # mx[, Female := -log(Female)]
+  # mx[, Male := -log(Male)]
+  # for(i in 1:length(years)){
+  #   mx.year = as.matrix(mx[year == as.integer(years[i]), .(Male, Female)])
+  #   rownames(mx.year) <- 0:80
+  #   fp$mx[,,i] <- sx.year
+  # }
   
   ## ASFR
   asfr <- fread(paste0(dir,'/ASFR/', loc, '.csv'))
@@ -300,14 +359,16 @@ sub.pop.params.demp <- function(demp, loc, k){
   asfr <- as.matrix(dcast.data.table(asfr, age~year))
   asfr <- asfr[,2:(length(years) + 1)]
   rownames(asfr) <- 15:49
-  demp$asfr <- asfr
+  fp$asfr <- array(0, c(35, length(years)))
+  dimnames(fp$asfr) <- list(age = paste0(15:49), year = paste0(years))
+  fp$asfr <- asfr
   
   ## TFR
-  tfr <- fread(paste0(dir, '/TFR/', loc, '.csv'))
-  tfr <- extend.years(tfr, years)
-  tfr.list <- tfr[,value]
-  names(tfr.list) <- tfr$year
-  demp$tfr <- tfr.list
+  # tfr <- fread(paste0(dir, '/TFR/', loc, '.csv'))
+  # tfr <- extend.years(tfr, years)
+  # tfr.list <- tfr[,value]
+  # names(tfr.list) <- tfr$year
+  # demp$tfr <- tfr.list
   
   
   ## SRB
@@ -319,12 +380,14 @@ sub.pop.params.demp <- function(demp, loc, k){
   mig[, sex := ifelse(sex_id == 1, 'Male', 'Female')]
   mig <- dcast.data.table(mig[,.(year, age, value, sex)], year + age ~ sex)
   mig <- extend.years(mig, years)
+  fp$netmigr <- array(0, c(66, 2, length(years)))
+  dimnames(fp$netmigr) <- list(paste0(15:80), c('Male', 'Female'), paste0(years))
   for(i in 1:length(years)){
-    mig.year = as.matrix(mig[year == as.integer(years[i]), .(Male, Female)])
-    rownames(mig.year) <- 0:80
-    demp$netmigr[,,i] <- mig.year
+    mig.year = as.matrix(mig[year == as.integer(years[i]) & age %in% 15:80, .(Male, Female)])
+    rownames(mig.year) <- 15:80
+    fp$netmigr[,,i] <- mig.year
   }
-  return(demp)
+  return(fp)
 }
 
 sub.pop.params.epp <- function(epp.subp, epp.input, loc) {

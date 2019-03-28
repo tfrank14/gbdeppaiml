@@ -79,7 +79,7 @@ for(loc in loc.list) {
                          "-hold_jid eppasm_prep_inputs_", run.name," ",
                          code.dir, "gbd/singR_shell.sh ",
                          code.dir, "gbd/main.R ",
-                         run.name, " ", loc, " ", proj.end)
+                         run.name, " ", loc, " ", proj.end, " ", paediatric)
     print(epp.string)
     system(epp.string)
 
