@@ -176,7 +176,7 @@ update_spectrum_fixpar <- function(specfp, hiv_steps_per_year = 10L, proj_start 
   
   specfp$ss <- ss
   specfp$SIM_YEARS <- ss$PROJ_YEARS
-  specfp$proj.steps <- proj_start + 0.5 + 0:(ss$hiv_steps_per_year * (fp$SIM_YEARS-1)) / ss$hiv_steps_per_year
+  specfp$proj.steps <- proj_start + 0.5 + 0:(ss$hiv_steps_per_year * (specfp$SIM_YEARS-1)) / ss$hiv_steps_per_year
   
   ## ######################## ##
   ##  Demographic parameters  ##
@@ -232,7 +232,7 @@ update_spectrum_fixpar <- function(specfp, hiv_steps_per_year = 10L, proj_start 
   ## Update eligibility threshold from CD4 <200 to <250 to account for additional
   ## proportion eligible with WHO Stage 3/4.
   if(artelig200adj){
-    specfp$artcd4elig_idx <- replace(fp$artcd4elig_idx, fp$artcd4elig_idx==5L, 4L)
+    specfp$artcd4elig_idx <- replace(specfp$artcd4elig_idx, specfp$artcd4elig_idx==5L, 4L)
   }
   ## percentage of those with CD4 <350 who are based on WHO Stage III/IV infection
   specfp$who34percelig <- who34percelig

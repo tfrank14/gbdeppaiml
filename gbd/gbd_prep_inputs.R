@@ -13,7 +13,7 @@ if(length(args) > 0) {
 	proj.end <- args[2]
 	run.group2 <- args[3]
 } else {
-	run.name <- "190318_group2"
+	run.name <- "190205_nobackcast_agesexdat"
 	proj.end <- 2019
 	run.group2 <- TRUE
 }
@@ -135,3 +135,23 @@ invisible(lapply(epp.locs, function(c.location_id){
   c.iso <- loc.table[location_id == c.location_id, ihme_loc_id]
   write.csv(tfr[location_id == c.location_id, list(value, year)], paste0(out.dir, '/TFR/', c.iso, '.csv'), row.names = F)
 }))
+
+## Births and SRB
+births <- get_population(age_group_id = 164, location_id = epp.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step1')
+dir.create(paste0(out.dir, '/births'), showWarnings = F)
+dir.create(paste0(out.dir, '/SRB'), showWarnings = F)
+invisible(lapply(epp.locs, function(c.location_id) {
+  out.births <- copy(births[location_id == c.location_id])
+  c.iso <- loc.table[location_id == c.location_id, ihme_loc_id]
+  births.dt <- out.births[,.(population = sum(population)), by = c('age_group_id', 'location_id', 'year_id', 'run_id')]
+  write.csv(births.dt, paste0(out.dir, '/births/', c.iso, ".csv"), row.names = F)
+  out.births[,sex := ifelse(sex_id == 1, 'male', 'female')]
+  out.births[,sex_id := NULL]
+  srb.dt <- dcast.data.table(out.births, year_id + location_id + run_id ~ sex, value.var = 'population')
+  srb.dt[, male_srb := male/(female + male)]
+  srb.dt[, female_srb := female/(female + male)]
+  srb.dt[,c('female', 'male') := NULL]
+  write.csv(srb.dt, paste0(out.dir, '/SRB/', c.iso, ".csv"), row.names = F)
+}))
+
+

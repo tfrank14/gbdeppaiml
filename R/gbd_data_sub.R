@@ -363,16 +363,19 @@ sub.pop.params.specfp <- function(fp, loc, k){
   dimnames(fp$asfr) <- list(age = paste0(15:49), year = paste0(years))
   fp$asfr <- asfr
   
-  ## TFR
-  # tfr <- fread(paste0(dir, '/TFR/', loc, '.csv'))
-  # tfr <- extend.years(tfr, years)
-  # tfr.list <- tfr[,value]
-  # names(tfr.list) <- tfr$year
-  # demp$tfr <- tfr.list
-  
+  ## Births
+  births <- fread(paste0(dir, '/births/', loc, '.csv'))
+  births <- births$population
+  names(births) <- start.year:stop.year
+  fp$births <- births
   
   ## SRB
-  ##TODO
+  srb <- fread(paste0(dir, '/SRB/', loc, '.csv'))
+  srb.mat <- array(0, c(2, length(years)))
+  srb.mat[1,] <- srb$male_srb
+  srb.mat[2,] <- srb$female_srb
+  colnames(srb.mat) <- years
+  fp$srb <- srb.mat
   
   ## Migration
   mig <- fread(paste0(dir, '/migration/', loc, '.csv'))
