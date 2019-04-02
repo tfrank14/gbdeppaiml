@@ -17,8 +17,8 @@ if(length(args) > 0) {
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
   paediatric <- as.logical(args[4])
 } else {
-	run.name <- "190205_nobackcast_agesexdat"
-	loc <- "MWI"
+	run.name <- "190318_group2"
+	loc <- "NLD"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- FALSE

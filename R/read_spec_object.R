@@ -101,7 +101,7 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
   }else{
     ## Group 2 inputs
     print('Appending STGPR death numbers')
-    dt <- append.deaths(dt, loc, run.name)
+    dt <- append.deaths(dt, loc, run.name, start.year, stop.year)
     attr(dt, 'specfp')$group <- '2'
     attr(dt, 'specfp')$mortadjust = 'simple'
 

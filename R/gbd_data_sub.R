@@ -15,7 +15,8 @@ extend.years <- function(dt, years){
   return(dt)
 }
 
-append.deaths <- function(dt, loc, run.name){
+append.deaths <- function(dt, loc, run.name, start.year, stop.year){
+  years <- start.year:stop.year
   deaths <- fread('/ihme/hiv/st_gpr/gpr_results.csv')
   deaths <- deaths[location_id == loc.table[ihme_loc_id == loc, location_id] & age_group_id >= 8,.(year_id, age_group_id, sex_id, gpr_mean, gpr_var)]
   ## Generate 1000 draws by location/year/age/sex
@@ -48,13 +49,35 @@ append.deaths <- function(dt, loc, run.name){
   deaths[age_group_id >= 30, age_group_id := 21]
   deaths <- deaths[,.(value = sum(value)), by = c('year_id', 'age_group_id', 'sex_id')]
   
-  ## currently only fitting at sex-specific level
-  ## TODO work on age specific
-  deaths_dt <- deaths[,.(value = sum(value)), by = c('year_id', 'sex_id')]
-  backfill <- expand.grid(year_id = 1971:1980, sex_id = 1:2, value = 0)
+  ## single-age-specific
+  age.map <- get_age_map()
+  deaths <- merge(deaths, age.map[,.(age_group_id, age_group_name_short)], by = 'age_group_id')
+  age.expand <- data.table(age = 15:80)
+  age.expand[,age_group_name_short := as.character(age - age %% 5)]
+  deaths <- merge(age.expand, deaths, by = 'age_group_name_short', allow.cartesian = TRUE)
+  ## assume deaths evenly split across 5-year age group
+  deaths[age!=80, value := value/5]
+  deaths[,c('age_group_id', 'age_group_name_short') := NULL]
+  
+  ## sex-specific
+  # deaths_dt <- deaths[,.(value = sum(value)), by = c('year_id', 'sex_id')]
+  deaths_dt <- deaths
+  backfill <- expand.grid(year_id = 1971:1980, sex_id = 1:2, age = 15:80, value = 0)
   deaths_dt <- rbind(backfill, deaths_dt)
-  vr <- reshape2::acast(deaths_dt, sex_id ~ year_id)
-  deaths_dt <- vr[ , match(rep(as.character(1971:2019), each = 10), colnames(vr))] / 10
+  deaths_dt <- dcast.data.table(deaths_dt, year_id + age ~ sex_id, value.var = 'value')
+  vr <- array(0, c(66, 2, length(years) - 1))
+  for(j in 1:(length(years) - 1)){
+    vr[,,j] <- as.matrix(deaths_dt[year_id == years[j + 1], c('1','2')])
+  }
+  dimnames(vr) <- list(age = 15:80, sex = c('Male', 'Female'), year = years[-1])
+  ## rep 10x for spectrum timesteps
+  deaths_dt <- array(0, c(66,2,(length(years) -1) * 10))
+  for(j in 1:(length(years) - 1)){
+    for(k in 1:10){
+      print((j-1) * 10 + k)
+      deaths_dt[,,((j - 1) * 10) + k] <- vr[,,j] / 10
+    }
+  }
   
   eppd <- list(vr = vr, 
                country = 'Netherlands',

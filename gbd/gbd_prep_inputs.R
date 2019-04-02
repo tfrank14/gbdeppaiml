@@ -13,7 +13,7 @@ if(length(args) > 0) {
 	proj.end <- args[2]
 	run.group2 <- args[3]
 } else {
-	run.name <- "190205_nobackcast_agesexdat"
+	run.name <- "190318_group2"
 	proj.end <- 2019
 	run.group2 <- TRUE
 }
@@ -124,16 +124,6 @@ dir.create(paste0(out.dir, '/ASFR'))
 invisible(lapply(epp.locs, function(c.location_id){
   c.iso <- loc.table[location_id == c.location_id, ihme_loc_id]
   write.csv(asfr[location_id == c.location_id, list(value, age, year)], paste0(out.dir, '/ASFR/', c.iso, '.csv'), row.names = F)
-}))
-
-## TFR
-tfr <- get_covariate_estimates(covariate_id = 149, location_id = epp.locs, decomp_step = 'step1')
-tfr <- tfr[,list(location_id, year_id, mean_value)]
-setnames(tfr, c('mean_value', 'year_id'), c('value', 'year'))
-dir.create(paste0(out.dir, '/TFR'))
-invisible(lapply(epp.locs, function(c.location_id){
-  c.iso <- loc.table[location_id == c.location_id, ihme_loc_id]
-  write.csv(tfr[location_id == c.location_id, list(value, year)], paste0(out.dir, '/TFR/', c.iso, '.csv'), row.names = F)
 }))
 
 ## Births and SRB
