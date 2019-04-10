@@ -18,33 +18,44 @@
 #' @export
 
 gbd_sim_mod <-  function(fit, rwproj=fit$fp$eppmod == "rspline", VERSION = 'C'){
-  fit$param <- lapply(seq_len(nrow(fit$resample)), function(ii) fnCreateParam(fit$resample[ii,], fit$fp))
-
-  if(rwproj){
-    if(exists("eppmod", where=fit$fp) && fit$fp$eppmod == "rtrend")
-      stop("Random-walk projection is only used with r-spline model")
-    
-    dt <- if(inherits(fit$fp, "eppfp")) fit$fp$dt else 1.0/fit$fp$ss$hiv_steps_per_year
-    
-    lastdata.idx <- as.integer(max(fit$likdat$ancsite.dat$df$yidx,
-                                   fit$likdat$hhs.dat$yidx,
-                                   fit$likdat$ancrtcens.dat$yidx,
-                                   fit$likdat$hhsincid.dat$idx,
-                                   fit$likdat$sibmx.dat$idx))
-    
-    fit$rvec.spline <- sapply(fit$param, "[[", "rvec")
-    firstidx <- which(fit$fp$proj.steps == fit$fp$tsEpidemicStart)
-    lastidx <- (lastdata.idx-1)/dt+1
-    
-    ## replace rvec with random-walk simulated rvec
-    fit$param <- lapply(fit$param, function(par){par$rvec <- epp:::sim_rvec_rwproj(par$rvec, firstidx, lastidx, dt); par})
-  }
-  
-  fp.list <- lapply(fit$param, function(par) update(fit$fp, list=par))
   ## We only need 1 draw, so let's save time and subset to that now
   rand.draw <- round(runif(1, min = 1, max = 3000))
-  fp.list <- list(fp.list[[rand.draw]])
-  mod <- lapply(fp.list, simmod, VERSION = VERSION)[[1]]
+  if(!(exists('group', where = fit$fp) & fit$fp$group == '2')){
+    fit$param <- lapply(seq_len(nrow(fit$resample)), function(ii) fnCreateParam(fit$resample[ii,], fit$fp))
+    
+    if(rwproj){
+      if(exists("eppmod", where=fit$fp) && fit$fp$eppmod == "rtrend")
+        stop("Random-walk projection is only used with r-spline model")
+      
+      dt <- if(inherits(fit$fp, "eppfp")) fit$fp$dt else 1.0/fit$fp$ss$hiv_steps_per_year
+      
+      lastdata.idx <- as.integer(max(fit$likdat$ancsite.dat$df$yidx,
+                                     fit$likdat$hhs.dat$yidx,
+                                     fit$likdat$ancrtcens.dat$yidx,
+                                     fit$likdat$hhsincid.dat$idx,
+                                     fit$likdat$sibmx.dat$idx))
+      
+      fit$rvec.spline <- sapply(fit$param, "[[", "rvec")
+      firstidx <- which(fit$fp$proj.steps == fit$fp$tsEpidemicStart)
+      lastidx <- (lastdata.idx-1)/dt+1
+      
+      ## replace rvec with random-walk simulated rvec
+      fit$param <- lapply(fit$param, function(par){par$rvec <- epp:::sim_rvec_rwproj(par$rvec, firstidx, lastidx, dt); par})
+    }
+    
+    fp.list <- lapply(fit$param, function(par) update(fit$fp, list=par))
+    fp.draw <- fp.list[[rand.draw]]
+  }else{
+    fp.draw <- fit$fp
+    theta <- fit$resample[rand.draw,]
+    fp.draw$mortscalar <- theta
+    fp.draw$art_mort <- fp.draw$art_mort * theta[2]
+    fp.draw$cd4_mort_adjust <- theta[1]
+    
+  }
+
+  mod <- simmod(fp.draw, VERSION = VERSION)
+  attr(mod, 'theta') <- fit$resample[rand.draw,]
   return(mod)
 }
 
@@ -197,8 +208,8 @@ get_pregprev <- function(mod, fp, hp1){
   py <- fp$ss$PROJ_YEARS
   expand_idx <- rep(fp$ss$h.fert.idx, fp$ss$h.ag.span[fp$ss$h.fert.idx])
   hivn_w <- mod[ss$p.fert.idx, ss$f.idx, ss$hivn.idx,  ]
-  hivp_w <- colSums(hp1$hivpop[ , ss$p.fert.idx, ss$f.idx, ] * fp$frr_cd4[ , expand_idx, ])
-  art_w <- colSums(hp1$artpop[ , , ss$p.fert.idx, ss$f.idx, ] * fp$frr_art[ , , expand_idx, ],,2)
+  hivp_w <- colSums(hp1$hivpop[ , ss$p.fert.idx, ss$f.idx, ] * fp$frr_cd4[ , expand_idx, 1:py])
+  art_w <- colSums(hp1$artpop[ , , ss$p.fert.idx, ss$f.idx, ] * fp$frr_art[ , , expand_idx, 1:py],,2)
   denom_w <- hivn_w + hivp_w + art_w
   pregprev_a <- 1 - (hivn_w + hivn_w[ , c(1, 1:(py-1))]) / (denom_w + denom_w[ , c(1, 1:(py-1))])
 
@@ -375,11 +386,24 @@ get_summary <- function(output, loc, run.name){
 
 ## Get data from eppd object, save for future plotting
 save_data <- function(loc, eppd, run.name){
+  age.map <-  fread(paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/age_map.csv"))
   prevdata <- data.table(eppd$hhs)
   prevdata <- prevdata[,.(sex, agegr, type = 'point', model = 'Household Survey', indicator = 'Prevalence', mean = prev, upper = prev + (1.96 * se), lower = ifelse(prev - (1.96 * se) < 0, 0, prev - (1.96 * se)), year)]
+  if(exists('agegr', where = prevdata)){
+    setnames(prevdata, 'agegr', 'age')
+    if('15-49' %in% prevdata$age){
+      prevdata[age == '15-49', age_group_id := 24]
+    }else{
+      prevdata[,age:=sapply(strsplit(age, "-"), "[[", 1)]
+      prevdata <- merge(prevdata, age.map[,.(age = age_group_name_short, age_group_id)],  by = 'age')
+    }
+  }
+  
   ancdata <- data.table(eppd$ancsitedat)
-  ancdata <- ancdata[,.(sex = 'female', agegr, type = 'point', model = 'ANC Site', indicator = 'Prevalence', mean = prev, upper = NA, lower = NA, year)]
-  output <- rbind(prevdata, ancdata)
+  ancdata <- ancdata[,.(sex = 'female', age = agegr, type = 'point', model = 'ANC Site', indicator = 'Prevalence', mean = prev, upper = NA, lower = NA, year, age_group_id = 24)]
+  output <- rbind(prevdata, ancdata, use.names = T)
+  output[, metric := 'Rate']
+  output[, ihme_loc_id := loc]
   path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
   dir.create(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/'), recursive = TRUE, showWarnings = FALSE)
   write.csv(output, path, row.names = F)

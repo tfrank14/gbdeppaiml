@@ -1,4 +1,0 @@
-﻿run_name,anc_sub,anc_backcast,age_prev,popadjust,anc_rt,epp_mod,comments
-190205_backcast_1549dat,TRUE,TRUE,FALSE,FALSE,FALSE,rhybrid,"Review week run, initially ran with rspline; poor equilibrium prior results everywhere but Malawi"
-190205_nobackcast_1549dat,FALSE,FALSE,FALSE,FALSE,FALSE,rhybrid,"Review week run, initially ran with rspline; poor equilibrium prior results everywhere but Malawi"
-190205_nobackcast_agesexdat,FALSE,FALSE,TRUE,FALSE,FALSE,rhybrid,"Review week run, initially ran with rspline; poor equilibrium prior results everywhere but Malawi"

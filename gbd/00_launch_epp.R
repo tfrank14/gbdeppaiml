@@ -103,7 +103,7 @@ for(loc in loc.list) {
                           "-hold_jid ", loc, "_save_draws ",
                           code.dir, "gbd/singR_shell.sh ", 
                           code.dir, "gbd/main_plot_output.R ",
-                          loc, " ", run.name, ' ', compare.run)
+                          loc, " ", run.name, ' ', paediatric, ' ', compare.run)
     print(plot.string)
     system(plot.string)
 }

@@ -17,9 +17,9 @@ if(length(args) > 0) {
   draw.fill <- as.logical(args[4])
   paediatric <- as.logical(args[5])
 } else {
-  run.name <- "190205_nobackcast_agesexdat"
-  loc <- "MWI"
-  n <- 100
+  run.name <- "190318_group2"
+  loc <- "NLD"
+  n <- 1
   draw.fill <- TRUE
   paediatric <- TRUE
 }

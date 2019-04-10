@@ -35,7 +35,7 @@ pop.sub <- TRUE
 art.sub <- TRUE
 prev.sub <- TRUE
 sexincrr.sub <- TRUE
-plot.draw <- TRUE
+plot.draw <- FALSE
 anc.sub <- c.args[['anc_sub']]
 anc.backcast <- c.args[['anc_backcast']]
 age.prev <- c.args[['age_prev']]
@@ -65,12 +65,12 @@ if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 if(age.prev == TRUE){attr(dt, 'specfp')$fitincrr <- 'linincrr'}
 
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0=1e2, B=1e2, number_k  = 5)
+fit <- fitmod(dt, eppmod = epp.mod, B0=1e3, B=1e2, number_k  = 50)
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)
 ## through the end of the projection period.
-if(!epp.mod == 'rspline'){
+if(epp.mod == 'rhybrid'){
   fit <- extend_projection(fit, proj_years = stop.year - start.year + 1)
 }
 
@@ -94,12 +94,10 @@ if(paediatric){
   write.csv(split.dt, paste0(out.dir, '/under_1_splits_', i, '.csv' ), row.names = F)
 }
 
-
 ## Write out theta for plotting posterior
-if(age.prev){
-  param <- data.table(theta = fit$resample[rand.draw,])
-  write.csv(param, paste0(out.dir,'/theta_', i, '.csv'), row.names = F)
-}
+param <- data.table(theta = attr(result, 'theta'))
+write.csv(param, paste0(out.dir,'/theta_', i, '.csv'), row.names = F)
+
 if(plot.draw){
   plot_15to49_draw(loc, output.dt, attr(dt, 'eppd'), run.name)
 }

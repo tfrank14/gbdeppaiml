@@ -7,7 +7,6 @@
 
 plot_15to49_draw <- function(loc, output, eppd, run.name, compare.run = '180702_numbat_combined', un.comparison = TRUE){
   ## Get data used in fitting model
-  ## TODO: call save_data somewhere else
   data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
   data <- data[agegr == '15-49']
   data[, c('agegr', 'sex') := NULL]
@@ -74,19 +73,23 @@ plot_15to49_draw <- function(loc, output, eppd, run.name, compare.run = '180702_
   dev.off()
 }
 
-plot_15to49 <- function(loc, run.name, compare.run = NA, un.comparison = TRUE){
+plot_15to49 <- function(loc, run.name, compare.run = NA, un.comparison = TRUE, plot.deaths = FALSE){
   data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
-  if('15-49' %in% data[model == 'Household Survey', agegr]){
-    data <- data[agegr == '15-49']
-    data[, c('agegr', 'sex') := NULL]
+  data <- data[metric == 'Rate']
+  data[, c('age_group_id', 'metric', 'ihme_loc_id') := NULL]
+  if(plot.deaths){
+    meas.list <- c('Incidence', 'Prevalence', 'Deaths')
+  }else{
+    meas.list <- c('Incidence', 'Prevalence')
   }
+  
   
   ##UNAIDS data
   un.data <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/data/prepped/GBD17_comparison_data.csv")
   
   if(un.comparison){
     compare.dt.unaids <- fread(un.data)
-    compare.dt.unaids <- compare.dt.unaids[age_group_id == 22 & sex_id == 3 & measure %in% c('Incidence', 'Prevalence') & 
+    compare.dt.unaids <- compare.dt.unaids[age_group_id == 22 & sex_id == 3 & measure %in% meas.list & 
                                              metric == 'Rate' & source=="UNAIDS17" & ihme_loc_id==loc]
   }
   
@@ -97,37 +100,36 @@ plot_15to49 <- function(loc, run.name, compare.run = NA, un.comparison = TRUE){
   
   ## GBD 2017
   compare.dt.17 <- fread(paste0('/snfs1/WORK/04_epi/01_database/02_data/hiv/spectrum/summary/180702_numbat_combined/locations/', loc, '_spectrum_prep.csv'))
-  compare.dt.17 <- compare.dt.17[age_group_id == 24 & sex_id == 3 & measure %in% c('Incidence', 'Prevalence') & metric == "Rate"]
+  compare.dt.17 <- compare.dt.17[age_group_id == 24 & sex_id == 3 & measure %in% meas.list & metric == "Rate"]
   compare.dt.17 <- compare.dt.17[,.(type = 'line', year = year_id, indicator = measure, model = 'GBD2017', mean, lower, upper)]
   
   if(!is.na(compare.run)){
     compare.dt <- fread(paste0('/share/hiv/epp_output/gbd19/', compare.run, '/compiled/', loc, '.csv'))
     compare.dt <- get_summary(compare.dt, loc, run.name)
-    compare.dt <- compare.dt[age_group_id == 24 & sex == 'both' & measure %in% c('Incidence', 'Prevalence') & metric == "Rate",.(type = 'line', year, indicator = measure, model = compare.run, mean, lower, upper)]
+    compare.dt <- compare.dt[age_group_id == 24 & sex == 'both' & measure %in% meas.list & metric == "Rate",.(type = 'line', year, indicator = measure, model = compare.run, mean, lower, upper)]
   }else{compare.dt = NULL} 
   
   cur.dt <- fread(paste0('/share/hiv/epp_output/gbd19/', run.name, '/compiled/', loc, '.csv'))
-  if('agegr' %in% names(data) & 'Household Survey' %in% data$model){
+  ## post stratify age-specific data using Spectrum population
+  if(nrow(data[age != '15-49']) > 0){
     pop.dt <- copy(cur.dt)
-    pop.dt <- pop.dt[!age >= 50]
-    pop.dt[,agegr := paste0((age - age%%5), '-', (age - age%%5 + 4))]
-    pop.dt <- pop.dt[,.(pop = sum(pop)), by = c('agegr', 'sex', 'year', 'run_num')]
-    pop.dt <- pop.dt[,.(pop = mean(pop)), by = c('agegr', 'sex', 'year')]
-    data.hhs <- data[model == 'Household Survey']
-    data <- data[!model == 'Household Survey']
-    data.hhs <- merge(pop.dt, data.hhs, by = c('sex', 'agegr', 'year'))
+    pop.dt <- pop.dt[age %in% 15:49]
+    pop.dt[,age := paste0(age - age%%5)]
+    pop.dt <- pop.dt[,.(pop = sum(pop)), by = c('age', 'sex', 'year', 'run_num')]
+    pop.dt <- pop.dt[,.(pop = mean(pop)), by = c('age', 'sex', 'year')]
+    data.agg <- data[age != '15-49' & age %in% seq(15, 49, 5)]
+    data <- data[age == '15-49']
+    data.agg <- merge(pop.dt, data.agg, by = c('sex', 'age', 'year'))
     ##TODO - what to do with upper and lower here?
-    data.hhs <- data.hhs[,.(mean = weighted.mean(x = mean, w = pop)), by =c('year') ]
-    data.hhs[,upper := NA]
-    data.hhs[,lower := NA]
-    data.hhs[,type := 'point']
-    data.hhs[,model := 'Household Survey']
-    data.hhs[,indicator := 'Prevalence']
-    data[,c('agegr', 'sex') := NULL]
-    data <- rbind(data, data.hhs, use.names = T)
+    data.agg <- data.agg[,.(mean = weighted.mean(x = mean, w = pop)), by =c('year', 'model', 'indicator') ]
+    data.agg[,upper := NA]
+    data.agg[,lower := NA]
+    data.agg[,type := 'point']
+    data[,c('sex', 'age') := NULL]
+    data <- rbind(data, data.agg, use.names = T)
   }
   cur.dt <- get_summary(cur.dt, loc, run.name)
-  cur.dt <- cur.dt[age_group_id == 24 & sex == 'both' & measure %in% c('Incidence', 'Prevalence') & metric == "Rate",.(type = 'line', year, indicator = measure, model = run.name, mean, lower, upper)]
+  cur.dt <- cur.dt[age_group_id == 24 & sex == 'both' & measure %in% meas.list & metric == "Rate",.(type = 'line', year, indicator = measure, model = run.name, mean, lower, upper)]
   
   if(un.comparison == TRUE) {
     compare.dt.unaids <- compare.dt.unaids[,.(type = 'line', year = year_id, indicator = measure, model = "UNAIDS17", 
@@ -138,10 +140,10 @@ plot_15to49 <- function(loc, run.name, compare.run = NA, un.comparison = TRUE){
     names(color.list) <- c(run.name, 'GBD2017', 'UNAIDS17', compare.run)
     
   } else {  
-  plot.dt <- rbind(data, compare.dt.17, compare.dt, cur.dt, use.names = T)
-  plot.dt[,model := factor(model)]
-  color.list <- c('blue', 'red', 'green')
-  names(color.list) <- c(run.name, 'GBD2017', compare.run)
+    plot.dt <- rbind(data, compare.dt.17, compare.dt, cur.dt, use.names = T)
+    plot.dt[,model := factor(model)]
+    color.list <- c('blue', 'red', 'green')
+    names(color.list) <- c(run.name, 'GBD2017', compare.run)
   
   }
   plot.dt <- plot.dt[year <= 2019]
@@ -157,27 +159,37 @@ plot_15to49 <- function(loc, run.name, compare.run = NA, un.comparison = TRUE){
     theme_bw() +
     scale_fill_manual(values=color.list) + scale_colour_manual(values=color.list)  +
     xlab("Year") + ylab("Mean") + ggtitle(paste0(loc.table[ihme_loc_id == loc, plot_name], ' EPPASM Results'))
-  if(nrow(plot.dt[model == 'Household Survey']) > 0){
-    gg <- gg + geom_point(data = plot.dt[model == 'Household Survey'], aes(x = year, y = mean, shape = 'Household Survey'))
-    gg <- gg + geom_errorbar(data = plot.dt[model == 'Household Survey'], aes(x = year, ymin = lower, ymax = upper))
-  }
+    if(nrow(plot.dt[model == 'Household Survey']) > 0){
+      gg <- gg + geom_point(data = plot.dt[model == 'Household Survey'], aes(x = year, y = mean, shape = 'Household Survey'))
+      gg <- gg + geom_errorbar(data = plot.dt[model == 'Household Survey'], aes(x = year, ymin = lower, ymax = upper))
+    }
+    if(nrow(plot.dt[model == 'VR']) > 0 & plot.deaths){
+      gg <- gg + geom_point(data = plot.dt[model == 'VR'], aes(x = year, y = mean, shape = 'VR'), size = 0.75)
+    }
   
   print(gg)
   dev.off()
 }
 
-plot_age_specific <- function(loc, run.name, compare.run = NA){
-
+plot_age_specific <- function(loc, run.name, compare.run = NA, paediatric = FALSE){
+  age.map <- fread(paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/age_map.csv"))
   data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
-  data <- data[!agegr == '15-49']
-  setnames(data, 'agegr', 'age')
-  data[,age:=sapply(strsplit(age, "-"), "[[", 1)]
+  ## TODO fix 80+ VR
+  data <- data[age_group_id %in% c(4:22) & metric == 'Rate']
+  data[, c('age_group_id', 'metric', 'ihme_loc_id') := NULL]
+  if('Deaths' %in% data$indicator){
+    ## TODO could add CI of STGPR
+    stgpr <- fread('/ihme/hiv/st_gpr/spectrum_gpr_results.csv')
+    stgpr <- stgpr[location_id == loc.table[ihme_loc_id == loc, location_id] & age_group_id %in% 8:22, .(age_group_id, year = year_id, sex = ifelse(sex_id == 1, 'male', 'female'), mean = gpr_mean / 100, type = 'line',
+                                                                                lower = NA, upper = NA, model = 'STGPR', indicator = 'Deaths')]
+    stgpr <- merge(stgpr, age.map[,.(age_group_id, age = age_group_name_short)], by = 'age_group_id')
+    stgpr[, age_group_id := NULL]
+    data <- rbind(data, stgpr, use.names = T)
+  }
   
   ## Comparison run
   compare.dt.17 <- fread(paste0('/snfs1/WORK/04_epi/01_database/02_data/hiv/spectrum/summary/180702_numbat_combined/locations/', loc, '_spectrum_prep.csv'))
   compare.dt.17 <- compare.dt.17[!age_group_id >= 24 & !sex_id == 3 & measure %in% c('Incidence', 'Prevalence', 'Deaths') & metric == 'Rate']
-  ## TODO - get age map in launch script
-  age.map <- get_age_map()
   compare.dt.17 <- merge(compare.dt.17, age.map[,.(age_group_id,age = age_group_name_short)], by = 'age_group_id', all.x = T)
   compare.dt.17 <- compare.dt.17[,.(age, sex = ifelse(sex_id == 1, 'male', 'female'), type = 'line', year = year_id, 
                               indicator = measure, model = 'GBD2017', mean, lower, upper)]
@@ -196,11 +208,11 @@ plot_age_specific <- function(loc, run.name, compare.run = NA){
   
   both.dt <- rbind(data, compare.dt.17, compare.dt, cur.dt, use.names = T)
   both.dt[,model := factor(model)]
-  color.list <- c('blue', 'red', 'green')
-  names(color.list) <- c(run.name,  'GBD2017', compare.run)
-  if(!'enn' %in% both.dt$age){
-    both.dt <- both.dt[!age %in% c(5,10),]
-    both.dt[,age := factor(age, levels=paste0(seq(15, 80, 5), 'All Ages'))]
+  color.list <- c('blue', 'red', 'green', 'yellow')
+  names(color.list) <- c(run.name,  'GBD2017', compare.run, 'STGPR')
+  if(!paediatric){
+    both.dt <- both.dt[!age %in% c('enn', 'lnn', 'pnn', '1', '5','10'),]
+    both.dt[,age := factor(age, levels=c(paste0(seq(15, 80, 5)), 'All Ages'))]
   }else{
     both.dt[,age := factor(age, levels=c('enn', 'lnn', 'pnn', '1', paste0( seq(5, 80, 5)), 'All Ages'))]
   }
@@ -227,6 +239,9 @@ plot_age_specific <- function(loc, run.name, compare.run = NA){
       if(nrow(plot.dt[model == 'Household Survey']) > 0){
         gg <- gg + geom_point(data = plot.dt[model == 'Household Survey'], aes(x = year, y = mean, shape = 'Household Survey'))
         gg <- gg + geom_errorbar(data = plot.dt[model == 'Household Survey'], aes(x = year, ymin = lower, ymax = upper))
+      }
+      if(nrow(plot.dt[model == 'VR']) > 0){
+        gg <- gg + geom_point(data = plot.dt[model == 'VR'], aes(x = year, y = mean, shape = 'VR'), size = 0.75)
       }
       
       print(gg)

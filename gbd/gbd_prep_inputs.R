@@ -25,10 +25,14 @@ dir.create(out.dir, showWarnings = FALSE)
 library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
 source(paste0(root, "/temp/central_comp/libraries/2019_gbd_env/r/get_population.R"))
 source('/home/j/temp/central_comp/libraries/2019_gbd_env/r/get_covariate_estimates.R')
+source(paste0(root, '/temp/central_comp/libraries/2019_gbd_env/r/get_cod_data.R'))
 
 ## Locations
 loc.table <- get_locations(hiv_metadata = TRUE)
 write.csv(loc.table, paste0(out.dir, 'location_table.csv'), row.names = F)
+age.map <- get_age_map()
+write.csv(age.map, paste0(out.dir, 'age_map.csv'), row.names = F)
+
 if(run.group2){
   ## Prep inputs for all estimation locations
   epp.locs <- loc.table[spectrum == 1, location_id]
@@ -65,13 +69,6 @@ invisible(lapply(c(epp.locs, parent.locs), function(c.location_id) {
   out.pop <- copy(pop[location_id == c.location_id])
   c.iso <- loc.table[location_id == c.location_id, ihme_loc_id]
   write.csv(out.pop, paste0(out.dir, '/population/', c.iso, ".csv"), row.names = F)
-}))
-
-pop.15to49 <- get_population(age_group_id = 8:15, location_id = epp.locs, year_id = 1950:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step1')
-dir.create(paste0(out.dir, '/population_15to49'), showWarnings = F)
-invisible(lapply(epp.locs, function(c.location_id) {
-  c.iso <- loc.table[location_id == c.location_id, ihme_loc_id]
-  write.csv(pop.15to49[location_id == c.location_id], paste0(out.dir, '/population_15to49/', c.iso, ".csv"), row.names = F)
 }))
 
 pop.splits <- get_population(age_group_id = c(2:5, 30:32, 235), location_id = epp.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step1')
@@ -143,5 +140,28 @@ invisible(lapply(epp.locs, function(c.location_id) {
   srb.dt[,c('female', 'male') := NULL]
   write.csv(srb.dt, paste0(out.dir, '/SRB/', c.iso, ".csv"), row.names = F)
 }))
+
+## Prep CoD data for plotting
+cod.dt <- get_cod_data(cause_id = 298, decomp_step = 'step1')
+cod.dt <- cod.dt[data_type == 'Vital Registration']
+cod.dt <- cod.dt[, list(model = 'VR', type = 'point', deaths = sum(deaths), rate = weighted.mean(x = rate, w = pop)), by = .(location_id, year, age_group_id, sex)]
+cod.dt <- cod.dt[age_group_id != 27]
+cod.dt <- melt(cod.dt, id.vars = c('location_id', 'age_group_id', 'type', 'clinic', 'year', 'sex'))
+setnames(cod.dt, c('variable', 'value'), c('metric', 'mean'))
+cod.dt[, c('lower', 'upper') := .(NA, NA)]
+cod.dt <- merge(cod.dt, loc.table[, list(ihme_loc_id, location_id)], by = c('location_id'))
+cod.dt[, location_id := NULL]
+cod.dt[metric == 'deaths', metric := 'Count']
+cod.dt[metric == 'rate', metric:= 'Rate']
+cod.dt[, indicator := 'Deaths']
+cod.dt[, sex := ifelse(sex_id == 1, 'male', 'female')]
+cod.dt[,sex_id := NULL]
+cod.dt <- merge(cod.dt, age.map[,.(age_group_id, age = age_group_name_short)], by = 'age_group_id')
+dir.create(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/'), showWarnings = F, recursive = T)
+invisible(lapply(unique(cod.dt$ihme_loc_id), function(loc){
+  write.csv(cod.dt[ihme_loc_id == loc], paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'), row.names = F)
+}))
+write.csv(cod.dt, paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/CoD_data.csv'), row.names = F)
+
 
 

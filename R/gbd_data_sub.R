@@ -52,6 +52,18 @@ append.deaths <- function(dt, loc, run.name, start.year, stop.year){
   ## single-age-specific
   age.map <- get_age_map()
   deaths <- merge(deaths, age.map[,.(age_group_id, age_group_name_short)], by = 'age_group_id')
+  vr.deaths <- copy(deaths)
+  vr.deaths[,age_group_id := NULL]
+  backfill <- expand.grid(year_id = 1971:1980, sex_id = 1:2, age_group_name_short = seq(15, 80, 5), value = 0)
+  vr.deaths <- rbind(vr.deaths, backfill, use.names = T)
+  vr.deaths <- dcast.data.table(vr.deaths, year_id + age_group_name_short ~ sex_id, value.var = 'value')
+  vr.deaths <- vr.deaths[order(year_id, age_group_name_short)]
+  vr <- array(0, c(14, 2, length(years) - 1))
+  for(j in 1:(length(years) - 1)){
+    vr[,,j] <- as.matrix(vr.deaths[year_id == years[j + 1], c('1','2')])
+  }
+  dimnames(vr) <- list(age = seq(15, 80, 5), sex = c('Male', 'Female'), year = years[-1])
+  
   age.expand <- data.table(age = 15:80)
   age.expand[,age_group_name_short := as.character(age - age %% 5)]
   deaths <- merge(age.expand, deaths, by = 'age_group_name_short', allow.cartesian = TRUE)
@@ -59,29 +71,22 @@ append.deaths <- function(dt, loc, run.name, start.year, stop.year){
   deaths[age!=80, value := value/5]
   deaths[,c('age_group_id', 'age_group_name_short') := NULL]
   
-  ## sex-specific
-  # deaths_dt <- deaths[,.(value = sum(value)), by = c('year_id', 'sex_id')]
-  deaths_dt <- deaths
   backfill <- expand.grid(year_id = 1971:1980, sex_id = 1:2, age = 15:80, value = 0)
-  deaths_dt <- rbind(backfill, deaths_dt)
-  deaths_dt <- dcast.data.table(deaths_dt, year_id + age ~ sex_id, value.var = 'value')
-  vr <- array(0, c(66, 2, length(years) - 1))
-  for(j in 1:(length(years) - 1)){
-    vr[,,j] <- as.matrix(deaths_dt[year_id == years[j + 1], c('1','2')])
-  }
-  dimnames(vr) <- list(age = 15:80, sex = c('Male', 'Female'), year = years[-1])
+  deaths <- rbind(backfill, deaths)
+  deaths <- deaths[order(year_id, age)]
+  deaths <- dcast.data.table(deaths, year_id + age ~ sex_id, value.var = 'value')
+
   ## rep 10x for spectrum timesteps
   deaths_dt <- array(0, c(66,2,(length(years) -1) * 10))
   for(j in 1:(length(years) - 1)){
     for(k in 1:10){
-      print((j-1) * 10 + k)
-      deaths_dt[,,((j - 1) * 10) + k] <- vr[,,j] / 10
+      deaths_dt[,,((j - 1) * 10) + k] <- as.matrix(deaths[year_id == years[j+1], c('1', '2')]) / 10
     }
   }
   
   eppd <- list(vr = vr, 
-               country = 'Netherlands',
-               region = 'NLD',
+               country = loc.table[ihme_loc_id == loc, location_name],
+               region = loc,
                projset_id = 0)
   attr(dt, 'eppd') <- eppd
   attr(dt, 'specfp')$deaths_dt <- deaths_dt
