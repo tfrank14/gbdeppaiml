@@ -65,7 +65,7 @@ if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 if(age.prev == TRUE){attr(dt, 'specfp')$fitincrr <- 'linincrr'}
 
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0=1e3, B=1e2, number_k  = 50)
+fit <- fitmod(dt, eppmod = epp.mod, B0=1e2, B=1e2, number_k  = 50)
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)

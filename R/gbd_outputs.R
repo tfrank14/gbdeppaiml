@@ -51,6 +51,15 @@ gbd_sim_mod <-  function(fit, rwproj=fit$fp$eppmod == "rspline", VERSION = 'C'){
     fp.draw$mortscalar <- theta
     fp.draw$art_mort <- fp.draw$art_mort * theta[2]
     fp.draw$cd4_mort_adjust <- theta[1]
+    incrr_nparam <- getnparam_incrr(fp.draw)
+    if(incrr_nparam > 0){
+      fp.draw$incrr_sex = fp.draw$incrr_sex[1:fp.draw$SIM_YEARS]
+      fp.draw$incrr_age = fp.draw$incrr_age[,,1:fp.draw$SIM_YEARS]
+      param <- list()
+      paramcurr <- 2
+      param <- transf_incrr(theta[paramcurr + 1:incrr_nparam], param, fp.draw)
+      fp.draw <- update(fp.draw, list = param)
+    }
     
   }
 

@@ -15,14 +15,13 @@ if(length(args) > 0) {
   loc <- args[1]
   run.name <- args[2]
   paediatric <- args[3]
-  if(length(args) > 3){
-    compare.run <- args[4]
-  }else{
-      compare.run <- NA
-    }
+  compare.run <- args[4]
+  if(compare.run == 'NA'){
+    compare.run <- NA
+  }
 } else {
-  loc <- "MWI"
-  run.name <- '190205_nobackcast_agesexdat'
+  loc <- "NLD"
+  run.name <- '190318_group2'
   compare.run <- NA
   paediatric <- FALSE
 }

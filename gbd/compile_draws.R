@@ -19,7 +19,7 @@ if(length(args) > 0) {
 } else {
   run.name <- "190318_group2"
   loc <- "NLD"
-  n <- 1
+  n <- 1000
   draw.fill <- TRUE
   paediatric <- TRUE
 }
@@ -61,13 +61,15 @@ dir.create(compiled.path, recursive = TRUE, showWarnings = FALSE)
 write.csv(dt, paste0(compiled.path, loc, '.csv'), row.names = F)
 
 ## under 1 splits
-split.list <- list.files(draw.path)
-split.list <- split.list[grepl('under_', split.list)]
-split.dt <- rbindlist(lapply(split.list, function(draw){
-  draw.dt <- fread(paste0(draw.path, '/', draw))
-}))
-if(draw.fill){
-  split.dt <- fill_draws(split.dt)
+if(paediatric){
+  split.list <- list.files(draw.path)
+  split.list <- split.list[grepl('under_', split.list)]
+  split.dt <- rbindlist(lapply(split.list, function(draw){
+    draw.dt <- fread(paste0(draw.path, '/', draw))
+  }))
+  if(draw.fill){
+    split.dt <- fill_draws(split.dt)
+  }
+  write.csv(split.dt, paste0(compiled.path, loc, '_under1_splits.csv'), row.names = F)
 }
-write.csv(split.dt, paste0(compiled.path, loc, '_under1_splits.csv'), row.names = F)
 
