@@ -67,7 +67,7 @@ if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 
 epp.mod <- 'rlogistic'
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0=1e4, B = 1e3, number_k = 100)
+fit <- fitmod(dt, eppmod = epp.mod, B0=1e4, B = 1e3, number_k = 50)
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)

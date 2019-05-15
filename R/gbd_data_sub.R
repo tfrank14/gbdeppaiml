@@ -21,6 +21,27 @@ append.ciba.incrr <- function(dt, loc, run.name){
   ciba.incrr.prior[, age := single.age - (single.age %% 5) ]
   ciba.incrr.prior[, single.age := NULL]
   ciba.incrr.prior <- ciba.incrr.prior[age >= 15,.(inc = mean(value)), by = c('year', 'sex', 'age', 'variable')]
+  
+  ##15-24:25+ ratio over time
+  pop <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/population/', loc, '.csv'))
+  pop[, age := (age_group_id - 5) * 5]
+  pop[, sex := ifelse(sex_id == 1, 'male', 'female')]
+  setnames(pop, 'year_id', 'year')
+  ciba <- merge(ciba.incrr.prior, pop[,.(sex, age, year, population)], by = c('age', 'sex', 'year'))
+  ciba[age < 25, group := 'young']
+  ciba[age >= 25 & age < 50, group := 'ref']
+  ciba <- ciba[!is.na(group)]
+  ciba <- ciba[,.(inc = weighted.mean(inc, w = population)), by = c('group', 'sex', 'year', 'variable')]
+  ciba <- ciba[,.(inc = mean(inc)), by = c('group', 'sex', 'year')]
+  ciba <- dcast.data.table(ciba, sex + year ~ group, value.var = 'inc')
+  ciba[, rr := young / ref]
+  ciba <- ciba[year >= 1980]
+  ciba[, year := year - 1979]
+  fit.f <- lm(rr~year, data = ciba[sex == 'female'])
+  fit.m <- lm(rr~year, data = ciba[sex == 'male'])
+  attr(dt, 'specfp')$f15to24_ratio <- fit.f$coefficients
+  attr(dt, 'specfp')$m15to24_ratio <- fit.m$coefficients
+  
   sex.incrr.prior <- copy(ciba.incrr.prior)
   ## crude mean, could be improved
   sex.incrr.prior <- sex.incrr.prior[,.(inc = mean(inc)), by = c('year', 'sex')]
@@ -56,6 +77,34 @@ append.diagn <- function(dt, loc, run.name){
   diagn.mat <- as.matrix(diagn.mat)
   attr(dt, 'eppd')$diagnoses <- diagn.mat
   return(dt)
+}
+
+append.vr <- function(dt, loc, run.name){
+  years <- start.year:stop.year
+  cod.dt <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
+  cod.dt <- cod.dt[year > 1980 & model == 'VR' & age_group_id >= 8 & metric == 'Count' & age_group_id != 22,.(mean, age, sex, year, age_group_id)]
+  cod.dt[age_group_id >= 30, age := '80']
+  cod.dt <- cod.dt[,.(mean = sum(mean)), by = c('age', 'sex', 'year')]
+  cod.dt[, age := as.numeric(age)]
+  backfill <- expand.grid(year = 1971:1980, sex = c('male', 'female'), age = seq(15, 80, 5), mean = 0)
+  cod.dt <- rbind(backfill, cod.dt, use.names = T)
+  fill <- expand.grid(year = 1971:2019, sex = c('male', 'female'), age = seq(15, 80, 5))
+  cod.dt <- merge(cod.dt, fill, by = c('year', 'sex', 'age'), all = T)
+  vr.deaths <- dcast.data.table(cod.dt, year + age ~ sex, value.var = 'mean')
+  vr.deaths <- vr.deaths[order(year, age)]
+  vr <- array(0, c(14, 2, length(years) - 1))
+  for(j in 1:(length(years) - 1)){
+    vr[,,j] <- as.matrix(vr.deaths[year == years[j + 1], .(male,female)])
+  }
+  dimnames(vr) <- list(age = seq(15, 80, 5), sex = c('Male', 'Female'), year = years[-1])
+  
+  eppd <- list(vr = vr, 
+               country = loc.table[ihme_loc_id == loc, location_name],
+               region = loc,
+               projset_id = 0)
+  attr(dt, 'eppd') <- eppd
+  return(dt)
+  
 }
 
 append.deaths <- function(dt, loc, run.name, start.year, stop.year){

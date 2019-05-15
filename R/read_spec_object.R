@@ -102,8 +102,8 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
     attr(dt, 'specfp')$prior_args <- list(logiota.unif.prior = c(log(1e-14), log(0.000025)))
   }else{
     ## Group 2 inputs
-    print('Appending STGPR death numbers')
-    dt <- append.deaths(dt, loc, run.name, start.year, stop.year)
+    print('Appending vital registration death data')
+    dt <- append.vr(dt, loc, run.name)
     attr(dt, 'specfp')$group <- '2'
     attr(dt, 'specfp')$mortadjust = 'simple'
     print('Appending case notification data')

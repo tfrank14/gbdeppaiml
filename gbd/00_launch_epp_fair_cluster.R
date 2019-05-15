@@ -32,7 +32,7 @@ loc.table <- data.table(get_locations(hiv_metadata = T))
 
 ### Code
 epp.list <- sort(loc.table[epp == 1, ihme_loc_id])
-loc.list <- c('NLD')
+loc.list <- c('NLD', 'AUS')
 
 # Cache inputs
 if(!file.exists(paste0(input.dir, "population/"))) {
@@ -71,7 +71,7 @@ if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
 ## Launch EPP
 for(loc in loc.list) {
     ## Run EPPASM
-    epp.string <- paste0("qsub -l m_mem_free=1G -l fthread=1 -l h_rt=03:00:00 -l archive -q all.q -P ", cluster.project, " ",
+    epp.string <- paste0("qsub -l m_mem_free=1G -l fthread=1 -l h_rt=04:00:00 -l archive -q all.q -P ", cluster.project, " ",
                          "-e /share/temp/sgeoutput/", user, "/errors ",
                          "-o /share/temp/sgeoutput/", user, "/output ",
                          "-N ", loc, "_eppasm ",
