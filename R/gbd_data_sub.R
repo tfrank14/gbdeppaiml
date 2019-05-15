@@ -15,6 +15,49 @@ extend.years <- function(dt, years){
   return(dt)
 }
 
+append.ciba.incrr <- function(dt, loc, run.name){
+  ciba.incrr.prior <- fread(paste0('/share/hiv/ciba_temp/180531_numbat_adj/', loc, '_SPU_inc_draws.csv'))
+  ciba.incrr.prior <- melt(ciba.incrr.prior, id.vars = c('year', 'single.age', 'sex'))
+  ciba.incrr.prior[, age := single.age - (single.age %% 5) ]
+  ciba.incrr.prior[, single.age := NULL]
+  ciba.incrr.prior <- ciba.incrr.prior[age >= 15,.(inc = mean(value)), by = c('year', 'sex', 'age', 'variable')]
+  sex.incrr.prior <- copy(ciba.incrr.prior)
+  ## crude mean, could be improved
+  sex.incrr.prior <- sex.incrr.prior[,.(inc = mean(inc)), by = c('year', 'sex')]
+  sex.incrr.prior <- dcast.data.table(sex.incrr.prior, year ~ sex, value.var = 'inc')
+  sex.incrr.prior[, rr := ifelse(male == 0, 0, female/male)]
+  sex.incrr.prior <- extend.years(sex.incrr.prior, years = start.year:stop.year)
+  sex.incrr.prior <- sex.incrr.prior$rr
+  names(sex.incrr.prior) <- start.year:stop.year
+  attr(dt, 'specfp')$incrr_sex <- sex.incrr.prior
+  ref.inc <- ciba.incrr.prior[age == 25]
+  ref.inc[, age := NULL]
+  setnames(ref.inc, 'inc', 'ref')
+  ciba.incrr.prior <- merge(ciba.incrr.prior, ref.inc, by = c('sex', 'year', 'variable'))
+  ciba.incrr.prior[, rr := ifelse(ref == 0, 0, inc / ref)]
+  ciba.incrr.prior <- ciba.incrr.prior[,.(rr = weighted.mean(rr, w = inc)), by = c('age', 'variable')]
+  ciba.incrr.prior <- ciba.incrr.prior[,.(sd = sqrt(var(rr)), rr = mean(rr)), by = c('age')]
+  old.age <- ciba.incrr.prior[age == 65]
+  ciba.incrr.prior[age >= 70, rr := old.age[, rr] * 0.5]
+  ciba.incrr.prior[age >= 70, sd := old.age[, sd]]
+  ciba.incrr.prior[, rr := log(rr)]
+  attr(dt, 'specfp')$ciba_incrr_prior <- data.frame(ciba.incrr.prior)
+  
+  attr(dt, 'specfp')$fitincrr <- 'cibaincrr'
+  
+  return(dt)
+}
+
+append.diagn <- function(dt, loc, run.name){
+  diagn.dt <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
+  diagn.dt <- diagn.dt[ihme_loc_id == loc & model == 'Case Report',.(sex, mean, year)]
+  diagn.mat <- dcast(diagn.dt, sex ~year, value.var = 'mean')
+  diagn.mat[, sex := NULL]
+  diagn.mat <- as.matrix(diagn.mat)
+  attr(dt, 'eppd')$diagnoses <- diagn.mat
+  return(dt)
+}
+
 append.deaths <- function(dt, loc, run.name, start.year, stop.year){
   years <- start.year:stop.year
   deaths <- fread('/ihme/hiv/st_gpr/gpr_results.csv')
@@ -50,7 +93,7 @@ append.deaths <- function(dt, loc, run.name, start.year, stop.year){
   deaths <- deaths[,.(value = sum(value)), by = c('year_id', 'age_group_id', 'sex_id')]
   
   ## single-age-specific
-  age.map <- get_age_map()
+  age.map <- fread(paste0('/ihme/hiv/epp_input/gbd19/', run.name, '/age_map.csv'))
   deaths <- merge(deaths, age.map[,.(age_group_id, age_group_name_short)], by = 'age_group_id')
   vr.deaths <- copy(deaths)
   vr.deaths[,age_group_id := NULL]
@@ -76,7 +119,7 @@ append.deaths <- function(dt, loc, run.name, start.year, stop.year){
   deaths <- deaths[order(year_id, age)]
   deaths <- dcast.data.table(deaths, year_id + age ~ sex_id, value.var = 'value')
 
-  ## rep 10x for spectrum timesteps
+  ## rep 10x for spectrum timesteps (if we're removing deaths directly from population...)
   deaths_dt <- array(0, c(66,2,(length(years) -1) * 10))
   for(j in 1:(length(years) - 1)){
     for(k in 1:10){
@@ -119,7 +162,10 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   years <- start.year:stop.year
   pop <- fread(paste0(dir, '/population_single_age/', loc, '.csv'))
   pop <- extend.years(pop, years)
-  pop[,age := ifelse(age_group_id == 28, 0, age_group_id - 48)]
+  pop[age_group_id == 28, age := 0]
+  pop[age_group_id == 21, age := 80]
+  pop[is.na(age), age := age_group_id - 48]
+  pop <- pop[order(age)]
   ped.pop <- pop[age <= 14]
   ped.pop[, sex := ifelse(sex_id == 1, 'Male', 'Female')]
   ped.pop <- dcast.data.table(ped.pop[,.(age, sex, year, population)], age + year ~ sex, value.var = 'population')
@@ -327,7 +373,10 @@ sub.pop.params.specfp <- function(fp, loc, k){
   years <- start.year:stop.year
   pop <- fread(paste0(dir, '/population_single_age/', loc, '.csv'))
   pop <- extend.years(pop, years)
-  pop[,age := ifelse(age_group_id == 28, 0, age_group_id - 48)]
+  pop[age_group_id == 28, age := 0]
+  pop[age_group_id == 21, age := 80]
+  pop[is.na(age), age := age_group_id - 48]
+  pop <- pop[order(age)]
   pop <- pop[age %in% 15:80]
   pop[, sex := ifelse(sex_id == 1, 'Male', 'Female')]
   pop <- dcast.data.table(pop[,.(age, sex, year, population)], age + year ~ sex, value.var = 'population')
@@ -421,57 +470,6 @@ sub.pop.params.specfp <- function(fp, loc, k){
   return(fp)
 }
 
-sub.pop.params.epp <- function(epp.subp, epp.input, loc) {
-  ## Load central functions
-  years <- epp.subp[[1]]$year
-  dir <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/')
-  # add in missing years in the future
-  in.pop <- fread(paste0(dir, '/population/', loc, '.csv'))
-  max.pop <- copy(in.pop[year_id == max(year_id)])
-  missing.dt <- rbindlist(lapply(setdiff(years, unique(in.pop$year_id)), function(year) {
-    dt <- copy(max.pop)
-    dt[, year_id := year]
-  }))
-  bound.pop <- rbind(in.pop, missing.dt)
-  bound.pop <- bound.pop[age_group_id %in% 8:14]
-  both.pop <- bound.pop[, .(population = sum(population)), by = .(age_group_id, year_id)]
-  pop15 <- both.pop[age_group_id == 8, population] / 5
-  pop50 <- both.pop[age_group_id == 14, population] / 5
-  pop15to49 <- both.pop[, .(population = sum(population)), by = .(year_id)]$population
-  
-  ## TODO: Is migration 15-49 sum?
-  mig.data <- fread(paste0(dir, '/migration/', loc, '.csv'))
-  max.mig <- copy(mig.data[year == max(year)])
-  missing.dt <- rbindlist(lapply(setdiff(years, unique(mig.data$year)), function(c.year) {
-    dt <- copy(max.mig)
-    dt[, year := c.year]
-  }))
-  mig.data <- rbind(mig.data, missing.dt)
-  mig.data <- mig.data[age %in% 15:49 & year %in% both.pop$year_id]
-  mig.data <- mig.data[,.(value = sum(value)), by = .(year)]$value
-  
-  for (pop in names(epp.subp)) {
-    temp.dt <- epp.subp[[pop]]
-    if(pop=="subpops") {
-      for (subpop in names(temp.dt)){       
-        epp.subp[[pop]][[subpop]]$pop15to49 <- pop15to49
-        epp.subp[[pop]][[subpop]]$pop15 <- pop15
-        epp.subp[[pop]][[subpop]]$pop50 <- pop50
-        epp.subp[[pop]][[subpop]]$netmigr <- mig.data
-      } 
-    } else {
-      epp.subp[[pop]]$pop15to49 <- pop15to49
-      epp.subp[[pop]]$pop15 <- pop15
-      epp.subp[[pop]]$pop50 <- pop50
-      epp.subp[[pop]]$netmigr <- mig.data
-    }
-  }
-  epp.input[['epp.pop']]$pop15to49 <- pop15to49
-  epp.input[['epp.pop']]$pop15 <- pop15
-  epp.input[['epp.pop']]$pop50 <- pop50
-  epp.input[['epp.pop']]$netmigr <- mig.data
-  return(list(epp.subp = epp.subp, epp.input = epp.input))
-}
 
 sub.prev <- function(loc, dt){
   gen.pop.dict <- c("General Population", "General population", "GP", "GENERAL POPULATION", "GEN. POPL.", "General population(Low Risk)", "Remaining Pop")

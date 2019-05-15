@@ -17,11 +17,11 @@ if(length(args) > 0) {
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
   paediatric <- as.logical(args[4])
 } else {
-	run.name <- "190318_group2"
-	loc <- "NLD"
+	run.name <- "190503_all"
+	loc <- "AUS"
 	stop.year <- 2019
 	i <- 1
-	paediatric <- FALSE
+	paediatric <- TRUE
 }
 
 run.table <- fread('/share/hiv/epp_input/gbd19/eppasm_run_table.csv')
@@ -61,11 +61,13 @@ loc.table <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/location_ta
 dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, 
                        pop.sub, anc.sub, anc.backcast, prev.sub, art.sub, sexincrr.sub, popadjust, age.prev, paediatric, anc.rt)
 
-if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
-if(age.prev == TRUE){attr(dt, 'specfp')$fitincrr <- 'linincrr'}
 
+
+if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
+
+epp.mod <- 'rlogistic'
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0=1e2, B=1e2, number_k  = 50)
+fit <- fitmod(dt, eppmod = epp.mod, B0=1e4, B = 1e3, number_k = 100)
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)

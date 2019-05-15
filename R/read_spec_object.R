@@ -44,8 +44,10 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
       print("Substituting prevalence surveys")
       if(age.prev){
         dt <- sub.prev.granular(dt, loc)
+        attr(dt, 'specfp')$fitincrr <- 'linincrr'
       } else{
         dt <- sub.prev(loc, dt)	
+        attr(dt, 'specfp')$fitincrr <- FALSE
       }
     }
     
@@ -104,7 +106,16 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
     dt <- append.deaths(dt, loc, run.name, start.year, stop.year)
     attr(dt, 'specfp')$group <- '2'
     attr(dt, 'specfp')$mortadjust = 'simple'
-
+    print('Appending case notification data')
+    dt <- append.diagn(dt, loc, run.name)
+    attr(dt, 'specfp')$incid_func <- NULL
+    attr(dt, 'specfp')$incidinput <- NULL
+    attr(dt, 'specfp')$eppmod <- 'rlogistic'
+    attr(dt, 'specfp')$ss$time_epi_start <- 1970
+    
+    print('Appending CIBA age/sex incrr priors')
+    dt <- append.ciba.incrr(dt, loc, run.name)
+    
   }
   
     return(dt)
@@ -241,6 +252,8 @@ update_spectrum_fixpar <- function(specfp, hiv_steps_per_year = 10L, proj_start 
   
   specfp$netmig_hivprob <- 0.4*0.22
   specfp$netmighivsurv <- 0.25/0.22
+  
+  attr(dt, 'specfp')$incid_func <- 'id'
   
   ## Circumcision parameters (default no effect)
   specfp$circ_incid_rr <- 0.0  # no reduction

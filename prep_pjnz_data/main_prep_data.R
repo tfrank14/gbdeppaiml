@@ -14,7 +14,7 @@ print(args)
 if(length(args) > 0) {
   loc <- args[1]
 } else {
-  loc <- "NLD"
+  loc <- "AUS"
 }
 ### Functions
 library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")

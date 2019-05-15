@@ -10,12 +10,12 @@ date <- substr(gsub("-","",Sys.Date()),3,8)
 library(data.table)
 
 ## Arguments
-run.name <- "190318_group2"
+run.name <- "190503_all"
 compare.run <- NA
 proj.end <- 2019
-n.draws <- 1000
+n.draws <- 100
 run.group2 <- TRUE
-paediatric <- FALSE
+paediatric <- TRUE
 cluster.project <- "proj_hiv"
 
 ### Paths
@@ -36,7 +36,7 @@ loc.list <- c('NLD')
 
 # Cache inputs
 if(!file.exists(paste0(input.dir, "population/"))) {
-  prep.job <- paste0("qsub -N eppasm_prep_inputs_", run.name," -P ",cluster.project," -pe multi_slot 5 ",
+  prep.job <- paste0("qsub -l m_mem_free=10G -l fthread=1 -l h_rt=00:30:00 -q all.q -N eppasm_prep_inputs_", run.name," -P ",cluster.project," ",
                       "-e /share/temp/sgeoutput/", user, "/errors ",
                       "-o /share/temp/sgeoutput/", user, "/output ",
                       code.dir, "gbd/singR_shell.sh ",
@@ -47,7 +47,7 @@ if(!file.exists(paste0(input.dir, "population/"))) {
 
 # Cache prevalence surveys
 if(!file.exists(paste0(input.dir, 'prev_surveys.csv'))){
-  prev.job <- paste0("qsub -N eppasm_prev_cache_", run.name," -P ",cluster.project," -pe multi_slot 2 ",
+  prev.job <- paste0("qsub -l m_mem_free=4G -l fthread=1 -l h_rt=00:10:00 -q all.q -N prev_cache_", run.name," -P ",cluster.project," ",
                      "-e /share/temp/sgeoutput/", user, "/errors ",
                      "-o /share/temp/sgeoutput/", user, "/output ",
                      code.dir, "gbd/singR_shell.sh ", 
@@ -58,7 +58,7 @@ if(!file.exists(paste0(input.dir, 'prev_surveys.csv'))){
 
 # Prepare ART proportions
 if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
-  prop.job <- paste0("qsub -P ", cluster.project," -N eppasm_art_prop_", run.name," -hold_jid eppasm_prev_cache_", run.name, " ", 
+  prop.job <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:20:00 -q all.q -P ", cluster.project," -N eppasm_art_prop_", run.name," -hold_jid eppasm_prev_cache_", run.name, " ", 
                      "-e /share/temp/sgeoutput/", user, "/errors ",
                      "-o /share/temp/sgeoutput/", user, "/output ",
                      "-hold_jid eppasm_prep_inputs_", run.name,',eppasm_prev_cache_', run.name,' ',

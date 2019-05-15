@@ -48,18 +48,23 @@ gbd_sim_mod <-  function(fit, rwproj=fit$fp$eppmod == "rspline", VERSION = 'C'){
   }else{
     fp.draw <- fit$fp
     theta <- fit$resample[rand.draw,]
-    fp.draw$mortscalar <- theta
-    fp.draw$art_mort <- fp.draw$art_mort * theta[2]
-    fp.draw$cd4_mort_adjust <- theta[1]
+    # fp.draw$art_mort <- fp.draw$art_mort * exp(theta[2])
+    fp.draw$cd4_mort_adjust <- exp(theta[1])
+    fp.draw$cd4_mort_adjust <- 1
     incrr_nparam <- getnparam_incrr(fp.draw)
+    paramcurr <- 2
     if(incrr_nparam > 0){
       fp.draw$incrr_sex = fp.draw$incrr_sex[1:fp.draw$SIM_YEARS]
       fp.draw$incrr_age = fp.draw$incrr_age[,,1:fp.draw$SIM_YEARS]
       param <- list()
-      paramcurr <- 2
       param <- transf_incrr(theta[paramcurr + 1:incrr_nparam], param, fp.draw)
+      paramcurr <- paramcurr + incrr_nparam
       fp.draw <- update(fp.draw, list = param)
     }
+    nparam_eppmod <- get_nparam_eppmod(fp.draw)
+    nparam_diagn <- 0
+    fp.draw <- create_param_csavr(theta[paramcurr + 1:(nparam_eppmod + nparam_diagn)], fp.draw)
+    
     
   }
 
@@ -321,7 +326,7 @@ split_u1 <- function(dt, loc, run.name){
   
 }
 
-get_summary <- function(output, loc, run.name){
+get_summary <- function(output, loc, run.name, paediatric = FALSE){
   ## create gbd age groups
   output[age >= 5,age_gbd :=  age - age%%5]
   output[age %in% 1:4, age_gbd := 1]
@@ -330,7 +335,7 @@ get_summary <- function(output, loc, run.name){
                       total_births = sum(total_births), hiv_births = sum(hiv_births), birth_prev = sum(birth_prev),
                       pop_art = sum(pop_art), pop_gt350 = sum(pop_gt350), pop_200to350 = sum(pop_200to350), pop_lt200 = sum(pop_lt200)), by = c('age_gbd', 'sex', 'year', 'run_num')]
   setnames(output, 'age_gbd', 'age')
-  if(0 %in% output$age){
+  if(paediatric){
     output.u1 <- split_u1(output[age == 0], loc, run.name)
     output <- output[age != 0]
     output <- rbind(output, output.u1, use.names = T)    
@@ -341,7 +346,7 @@ get_summary <- function(output, loc, run.name){
   
   ##TODO: Write out age map in launch script
   age.map <- get_age_map()
-  if(!'enn' %in% output$age){
+  if(!paediatric){
     age.spec <- age.map[age_group_id %in% 8:21,.(age_group_id, age = age_group_name_short)]
     age.spec[, age := as.integer(age)]
   }else{
