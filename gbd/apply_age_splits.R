@@ -1,93 +1,79 @@
-## Author: Grant Nguyen
-## Date 2/10/16
-## Purpose: Split Spectrum under-5 prev, inc, etc. to NN granular and 1-4 age groups
-###############################################################################################################
-## Set up settings
+### Setup
 rm(list=ls())
-
-if (Sys.info()[1]=="Windows") {
-  root <- "J:" 
-  user <- Sys.getenv("USERNAME")
-} else {
-  root <- "/home/j"
-  user <- Sys.getenv("USER")
-}
+windows <- Sys.info()[1][["sysname"]]=="Windows"
+root <- ifelse(windows,"J:/","/home/j/")
+user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
+code.dir <- paste0(ifelse(windows, "H:", paste0("/ihme/homes/", user)), "/gbdeppaiml/")
 
 ### Arguments
 args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
-  iso3 <- args[1]
-  spec_name <- args[2]
+  loc <- args[1]
+  run.name <- args[2]
+  spec.name <- args[3]
 } else {
-  iso3 <- "NGA_25318"
-  spec_name <- "181126_test"
+  loc <- "NGA_25338"
+  run.name <- "190613_quetzal"
+  spec.name <- "190613_quetzal"
 }
 fill.draw <- T
 fill.na <- T
 
 ### Paths
-# Searches for Spectrum results from first to last, useful if you ran spectrum multiple times and need to compile down to one
-spec_dir <- paste0('/share/hiv/epp_output/gbd19/', run.name '/')
-out_dir <- paste0("/ihme/hiv/spectrum_prepped/art_draws/",spec_name)
+eppasm_dir <- paste0('/share/hiv/epp_output/gbd19/', run.name, '/')
+out_dir <- paste0("/ihme/hiv/spectrum_prepped/art_draws/",spec.name)
 dir.create(out_dir, recursive = T, showWarnings = F)
-out_dir_death <- paste0("/ihme/hiv/spectrum_prepped/death_draws/",spec_name)
+out_dir_death <- paste0("/ihme/hiv/spectrum_prepped/death_draws/",spec.name)
 dir.create(out_dir_death, recursive = T, showWarnings = F)
-out_dir_birth <- paste0("/ihme/hiv/spectrum_prepped/birth_prev/",spec_name, '/')
+out_dir_birth <- paste0("/ihme/hiv/spectrum_prepped/birth_prev/",spec.name, '/')
 dir.create(out_dir_birth, recursive = T, showWarnings = F)
+
 ### Functions
 library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
 source(paste0(root, "/temp/central_comp/libraries/current/r/get_population.R"))
 source(paste0(root, "/Project/Mortality/shared/functions/get_locations.r"))
+setwd(paste0(ifelse(windows, "H:", paste0("/ihme/homes/", user)), "/eppasm/"))
+devtools::load_all()
+setwd(code.dir)
+devtools::load_all()
 
 
 ## Libraries etc.
 library(data.table); library(foreign); library(assertable)
 age_map <- data.table(fread("/ihme/hiv/spectrum_prepped/age_map.csv"))
-age_map <- age_map[(age_group_id>=6 & age_group_id <=21) | age_group_id == 28,list(age_group_id,age=age_group_name_short)]
+age_map <- age_map[(age_group_id>=2 & age_group_id <=21) ,list(age_group_id,age=age_group_name_short)]
 
 ## Create a map to scramble draws from Spectrum
 locations <- data.table(get_locations(hiv_metadata = T))
-loc_id <- locations[ihme_loc_id==iso3,location_id]
+loc_id <- locations[ihme_loc_id==loc,location_id]
 
 ## Use draw maps to scramble draws so that they are not correlated over time
 ## This is because Spectrum output is semi-ranked due to Ranked Draws into EPP
 ## Then, it propogates into here which would screw up downstream processes
 ## This is done here as opposed to raw Spectrum output because we want to preserve the draw-to-draw matching of Spectrum and lifetables, then scramble them after they've been merged together
-draw_map <- fread("/ihme/hiv/spectrum_prepped/draw_map.csv")
-draw_map <- draw_map[location_id==loc_id,list(old_draw,new_draw)]
-setnames(draw_map,"old_draw","run_num")
-draw_map[,run_num:=run_num+1]
-draw_map[,new_draw:=new_draw+1]
+# draw_map <- fread("/ihme/hiv/spectrum_prepped/draw_map.csv")
+# draw_map <- draw_map[location_id==loc_id,list(old_draw,new_draw)]
+# setnames(draw_map,"old_draw","run_num")
+# draw_map[,run_num:=run_num+1]
+# draw_map[,new_draw:=new_draw+1]
 
 
 ##################################################################################################################
 ## Import and Format Data
 
-## Function to fill in missing year/sex/age/draw combinations for Spectrum draws
-fill_years <- function(data) {
-  years <- seq(1970,2019)
-  sexes <- c("male","female")
-  ages <- seq(0,80,5)
-  run_num <- seq(1,1000)
-  draw_count <- length(sexes) * length(ages) * length(run_num) # How many draws do we expect per year?
-  template <- data.table(expand.grid(year=years,sex=sexes,age=ages,run_num=run_num,stringsAsFactors=F))
-  data <- merge(data,template,by=c("year","sex","age","run_num"),all=T)
-  
-  # Get number of missing observations in each yer
-  # We expect 34,000 rows per year -- if a year has a different number, this means not all draws are present or something else strange has happened
-  data_miss_count <- data[is.na(hiv_deaths),.N,by=year]
-  miss_years <- unique(data_miss_count[N==draw_count,year])
-  data[year %in% miss_years,c("hiv_deaths","new_hiv","hiv_births","total_births","suscept_pop","pop_lt200","pop_200to350","pop_gt350","pop_art", "birth_prev"):=0]
-  data[year %in% miss_years,c("non_hiv_deaths","pop_neg"):=1] # To prevent divide by 0 issues later on
 
-  assert_ids(data, id_vars = list(year = years, sex = sexes, age = ages, run_num = run_num))
-  return(data.table(data))
-}
-
-## Bring in Spectrum Draws
-spec_draw <- data.table(fread(paste0(spec_dir,"/",iso3,"_ART_data.csv")))
-spec_draw[, V1 := NULL]
-
+## Bring in EPPASM Draws
+spec_draw <- data.table(fread(paste0(eppasm_dir,"/compiled/",loc,".csv")))
+spec_draw[age >= 5,age_gbd :=  age - age%%5]
+spec_draw[age %in% 1:4, age_gbd := 1]
+spec_draw[age == 0, age_gbd := 0 ]
+spec_draw <- spec_draw[,.(pop = sum(pop), hiv_deaths = sum(hiv_deaths), non_hiv_deaths = sum(non_hiv_deaths), new_hiv = sum(new_hiv), pop_neg = sum(pop_neg),
+                    total_births = sum(total_births), hiv_births = sum(hiv_births), birth_prev = sum(birth_prev),
+                    pop_art = sum(pop_art), pop_gt350 = sum(pop_gt350), pop_200to350 = sum(pop_200to350), pop_lt200 = sum(pop_lt200)), by = c('age_gbd', 'sex', 'year', 'run_num')]
+setnames(spec_draw, 'age_gbd', 'age')
+output.u1 <- split_u1(spec_draw[age == 0], loc, run.name)
+spec_draw <- spec_draw[age != 0]
+spec_draw <- rbind(spec_draw, output.u1, use.names = T)    
 
 # Fill in missing draws
 if(fill.draw) {
@@ -114,103 +100,49 @@ if(fill.na & na.present) {
   }
 }
 
-spec_draw <- fill_years(spec_draw)
 spec_draw[sex=="male",sex_id:=1]
 spec_draw[sex=="female",sex_id:=2] 
 spec_draw[,age:=as.character(age)]
 spec_draw <- merge(spec_draw,age_map,by="age")
 spec_draw[,age:=NULL]
-spec_draw[,spec_pop:=pop_neg+pop_lt200+pop_200to350+pop_gt350+pop_art]
-spec_draw[spec_pop==0,pop_neg:=1] # Sometimes spectrum reports no pop total. Assume pop_neg of 1 and spec_pop of 1
-spec_draw[spec_pop==0,spec_pop:=1] 
+## vestigial column
+spec_draw[, suscept_pop := pop_neg]
 
-## Make under-5 proportions to split pops, inc, prev, etc.
-pop <- get_population( age_group_id = -1, location_id = loc_id, year_id = -1, sex_id = c(1,2), location_set_id = 79, status = "recent", gbd_round_id = 6)[, 
-                          .(location_id, sex_id, year_id, age_group_id, population)]
-setnames(pop, c("year_id", "population"), c("year", "gbd_pop"))
-birth_pop <- get_population(age_group_id=164, location_id=loc_id, year_id=1970:2019, sex_id=1:2, gbd_round_id = 6)
-setnames(birth_pop, c("year_id", "population"), c("year", "gbd_pop"))
 
 ## Calculate birth prevalence rate
+birth_pop <- get_population(age_group_id=164, location_id=loc_id, year_id=1970:2019, sex_id=1:2, gbd_round_id = 6, decomp_step = 'step2')
+setnames(birth_pop, c("year_id", "population"), c("year", "gbd_pop"))
 birth_dt <- copy(spec_draw)
 birth_dt <- birth_dt[,.(age_group_id = 164, birth_prev = sum(birth_prev), total_births = sum(total_births)), by = c('year', 'run_num', 'sex_id')]
 birth_dt[, total_births := sum(total_births)/2, by = c('year', 'run_num')]
 birth_dt[, birth_prev_rate := ifelse(total_births == 0, 0, birth_prev/total_births)]
 ## Scale to GBD pop
-# birth_dt <- merge(birth_dt, birth_pop[,.(year, gbd_pop, sex_id)], by = c('year', 'sex_id'))
-# birth_dt[, birth_prev_count := birth_prev_rate * gbd_pop]
-# write.csv(birth_dt[,.(year, sex_id, run_num, age_group_id, birth_prev_rate, birth_prev_count)], paste0(out_dir_birth, iso3, '.csv'), row.names = F)
+birth_dt <- merge(birth_dt, birth_pop[,.(year, gbd_pop, sex_id)], by = c('year', 'sex_id'))
+birth_dt[, birth_prev_count := birth_prev_rate * gbd_pop]
+write.csv(birth_dt[,.(year, sex_id, run_num, age_group_id, birth_prev_rate, birth_prev_count)], paste0(out_dir_birth, loc, '.csv'), row.names = F)
 spec_draw[,birth_prev := NULL]
-
-## Save under-5 Spectrum pops for splitting
-spec_u5 <- data.table(spec_draw[age_group_id==28,])
-spec_u5[,c("age_group_id"):=NULL]
-
-# Get raw proportions for splitting populations and other general ones
-u5_pop <- pop[age_group_id %in% c(2,3,4,5),]
-u5_pop[,pop_total:=sum(gbd_pop), by=list(sex_id,year)]
-u5_pop[,pop_prop:=gbd_pop/sum(gbd_pop), by=list(sex_id,year)]
-
-# Create proportions for incidence (no 1-4 age group because no incidence after 12 months)
-u5_pop[age_group_id!=5,pop_prop_inc:=pop_prop]
-u5_pop[age_group_id==5,pop_prop_inc:=0]
-u5_pop[,pop_prop_inc:=pop_prop_inc/sum(pop_prop_inc), by=list(sex_id,year)]
-
-# Create proportions for death (no ENN or LNN deaths)
-u5_pop[age_group_id!=2 & age_group_id != 3,pop_prop_death:=pop_prop]
-u5_pop[age_group_id==2 | age_group_id == 3,pop_prop_death:=0]
-u5_pop[,pop_prop_death:=pop_prop_death/sum(pop_prop_death), by=list(sex_id,year)]
-
-u5_pop <- u5_pop[,list(location_id,sex_id,year,age_group_id,pop_total,pop_prop,pop_prop_inc,pop_prop_death)]
-
-#################
 
 ## Save over-80 Spectrum pops for splitting
 spec_o80 <- data.table(spec_draw[age_group_id==21,])
-spec_o80[,c("age_group_id"):=NULL]
+spec_o80[, age_group_id := NULL]
 
 # Get raw proportions for splitting populations and other general ones
+pop <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/population_splits/', loc, '.csv'))
 o80_pop <- pop[age_group_id %in% c(30:32, 235),]
-o80_pop[,pop_total:=sum(gbd_pop), by=list(sex_id,year)]
-o80_pop[,pop_prop:=gbd_pop/sum(gbd_pop), by=list(sex_id,year)]
-
-# Create proportions for incidence (no 1-4 age group because no incidence after 12 months)
+o80_pop[,pop_total:=sum(population), by=list(sex_id,year_id)]
+o80_pop[,pop_prop:=population/pop_total, by=list(sex_id,year_id)]
+# Create proportions for incidence 
 o80_pop[,pop_prop_inc:=pop_prop]
-
-# Create proportions for death (no ENN or LNN deaths)
+# Create proportions for death 
 o80_pop[,pop_prop_death:=pop_prop]
+o80_pop <- o80_pop[,list(location_id,sex_id,year = year_id,age_group_id,pop_total,pop_prop,pop_prop_inc,pop_prop_death)]
 
-o80_pop <- o80_pop[,list(location_id,sex_id,year,age_group_id,pop_total,pop_prop,pop_prop_inc,pop_prop_death)]
-
-##################################################################################################################
-## Split under-5 proportionally by age-group populations
-spec_u5 <- merge(spec_u5,u5_pop,by=c("year","sex_id"), allow.cartesian=T) # m:m merge -- expand pops by draw, spec by age groups
-
-# Split all variables that can be split by population without age restrictions for 1-4 age cat
-pop_weight_all <- function(x) return(x*spec_u5[['pop_prop']])
-all_age_vars <- c("suscept_pop","pop_neg","non_hiv_deaths","pop_lt200","pop_200to350","pop_gt350","pop_art","spec_pop")
-spec_u5[,(all_age_vars) := lapply(.SD,pop_weight_all),.SDcols=all_age_vars] 
-
-# Split incidence into NN categories only, and enforce 0 for 1-4
-pop_weight_inc <- function(x) return(x*spec_u5[['pop_prop_inc']])
-inc_vars <- c("new_hiv")
-spec_u5[,(inc_vars) := lapply(.SD,pop_weight_inc),.SDcols=inc_vars] 
-
-# Split deaths into ENN and 1-4 age categories
-pop_weight_death <- function(x) return(x*spec_u5[['pop_prop_death']])
-death_vars <- c("hiv_deaths")
-spec_u5[,(death_vars) := lapply(.SD,pop_weight_death),.SDcols=death_vars] 
-
-spec_u5[,c("pop_total","pop_prop","pop_prop_inc","pop_prop_death","location_id") :=NULL]
-
-
-#########
 ## Split over-80 proportionally by age-group populations
 spec_o80 <- merge(spec_o80,o80_pop,by=c("year","sex_id"),allow.cartesian=T) # m:m merge -- expand pops by draw, spec by age groups
 
 # Split all variables that can be split by population
 pop_weight_all <- function(x) return(x*spec_o80[['pop_prop']])
-all_age_vars <- c("suscept_pop","pop_neg","non_hiv_deaths","pop_lt200","pop_200to350","pop_gt350","pop_art","spec_pop")
+all_age_vars <- c("suscept_pop","pop_neg","non_hiv_deaths","pop_lt200","pop_200to350","pop_gt350","pop_art","pop")
 spec_o80[,(all_age_vars) := lapply(.SD,pop_weight_all),.SDcols=all_age_vars] 
 
 # Split incidence
@@ -247,10 +179,12 @@ shift_to_midyear <- function(x) {
 }
 
 # Recombine with spec_draw
-spec_combined <- rbindlist(list(spec_draw[!(age_group_id %in% c(21, 28)),],spec_u5, spec_o80),use.names=T) # Drop 0-5 and 80+, replace with spec_u5 and spec_o80 
+spec_combined <- rbindlist(list(spec_draw[!age_group_id == 21,],spec_o80),use.names=T) # Drop 0-5 and 80+, replace with spec_u5 and spec_o80 
 spec_combined[, non_hiv_deaths_prop := non_hiv_deaths / (non_hiv_deaths + hiv_deaths)]
+spec_combined[is.na(non_hiv_deaths_prop), non_hiv_deaths_prop := 1]
 
 ### get the mid year spec_pop for incidence and death
+setnames(spec_combined, 'pop', 'spec_pop')
 spec_combined_last <- spec_combined[,.(year, sex_id, run_num, age_group_id, spec_pop)]
 spec_combined_last[, year:= year+1]
 spec_combined_0 <- spec_combined[year==min(spec_combined$year),.(year, sex_id, run_num, age_group_id, suscept_pop)]
@@ -262,33 +196,25 @@ spec_combined <- merge(spec_combined, spec_combined_last, by=c("year", "sex_id",
 
 convert_vars <- c("suscept_pop","pop_neg","pop_lt200","pop_200to350","pop_gt350","pop_art")
 spec_combined[,(convert_vars) := lapply(.SD,convert_to_rate),.SDcols=convert_vars] 
-spec_combined[,(convert_vars) := lapply(.SD,shift_to_midyear),.SDcols=convert_vars, by=c("sex_id", "run_num", "age_group_id")] 
+# spec_combined[,(convert_vars) := lapply(.SD,shift_to_midyear),.SDcols=convert_vars, by=c("sex_id", "run_num", "age_group_id")] 
 convert_vars2  <- c(inc_vars,death_vars,"non_hiv_deaths", "hiv_births","total_births")
 spec_combined[,(convert_vars2) := lapply(.SD,convert_to_rate_2),.SDcols=convert_vars2] 
 print(head(spec_combined))
-print(head(spec_u5))
 
 
 ##################################################################################################################
 ## Format and Output
 setnames(spec_combined,"year","year_id")
 
-# Output deaths as a separate csv to make read-time easier on 01c step
-# Note that non-HIV deaths in NN granular groups is NOT usable in current format -- needs to be collapsed to under-1 because deaths were simply pop-weighted.
-# Used in 02_lt_gen in ensemble code, where it is collapsed to under-1
-
 print(head(spec_combined))
-print(head(spec_combined[,non_hiv_deaths]))
 assert_values(spec_combined, names(spec_combined), "gte", 0)
 assert_values(spec_combined, colnames(spec_combined), "not_na")
 
-write.csv(spec_combined[,list(sex_id,year_id,age_group_id,run_num,hiv_deaths,non_hiv_deaths, non_hiv_deaths_prop)],paste0(out_dir_death,"/",iso3,"_ART_deaths.csv"),row.names=F)
+write.csv(spec_combined[,list(sex_id,year_id,age_group_id,run_num,hiv_deaths,non_hiv_deaths, non_hiv_deaths_prop)],paste0(out_dir_death,"/",loc,"_ART_deaths.csv"),row.names=F)
 
-# Rescramble draws to match Reckoning output before outputting non-fatal results (can't do it to the fatal that feeds into the Reckoning because we want to preserve within-draw correlation between them)
-spec_combined <- merge(spec_combined,draw_map,by="run_num")
+# # Rescramble draws to match Reckoning output before outputting non-fatal results (can't do it to the fatal that feeds into the Reckoning because we want to preserve within-draw correlation between them)
+# spec_combined <- merge(spec_combined,draw_map,by="run_num")
 
-
-
-write.csv(spec_combined[,list(sex_id,year_id,run_num,hiv_deaths, non_hiv_deaths, new_hiv,hiv_births,suscept_pop,total_births,pop_neg,pop_lt200,pop_200to350,pop_gt350,pop_art,age_group_id)],paste0(out_dir,"/",iso3,"_ART_data.csv"),row.names=F)
+write.csv(spec_combined[,list(sex_id,year_id,run_num,hiv_deaths, non_hiv_deaths, new_hiv,hiv_births,suscept_pop,total_births,pop_neg,pop_lt200,pop_200to350,pop_gt350,pop_art,age_group_id)],paste0(out_dir,"/",loc,"_ART_data.csv"),row.names=F)
 
 

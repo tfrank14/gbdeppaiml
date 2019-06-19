@@ -15,7 +15,7 @@ if(length(args) > 0) {
 } else {
 	run.name <- "190503_all"
 	proj.end <- 2019
-	run.group2 <- TRUE
+	run.group2 <- FALSE
 }
 
 out.dir <- paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/")
@@ -44,9 +44,10 @@ if(run.group2){
 parent.locs <- loc.table[most_detailed == 0 & level == 3, location_id]
 
 ## Population
-pop.all <- get_population(age_group_id = c(28, 49:127, 21), location_id = c(epp.locs, parent.locs), year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, single_year_age = T, decomp_step = 'step2')
-over80 <-  get_population(age_group_id = c(21), location_id = c(epp.locs, parent.locs), year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step2')
-pop.all <- rbind(pop.all, over80, use.names = T)
+pop.all <- get_population(age_group_id = c(28, 49:127), location_id = c(epp.locs, parent.locs), year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, single_year_age = T, decomp_step = 'step2')
+## this is a separate call because you can't get 80+ with single_age_pop = TRUE
+pop.o80 <- get_population(age_group_id = c( 21), location_id = c(epp.locs, parent.locs), year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step2')
+pop.all <- rbind(pop.all, pop.o80, use.names = T)
 dir.create(paste0(out.dir, '/population_single_age'), showWarnings = F)
 invisible(lapply(c(epp.locs, parent.locs), function(c.location_id) {
   out.pop <- copy(pop.all[location_id == c.location_id])
@@ -57,8 +58,9 @@ invisible(lapply(c(epp.locs, parent.locs), function(c.location_id) {
 ###For India Rural-urban Splitting locations
 india.locs <- loc.table[level>4 & grepl("IND", ihme_loc_id) ,location_id]
 pop <- get_population(age_group_id = c(28, 49:127), location_id = india.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, single_year_age = T, decomp_step = 'step2')
-over80 <-  get_population(age_group_id = c(21), location_id = c(epp.locs, parent.locs), year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step2')
-pop <- rbind(pop, over80, use.names = T)
+## this is a separate call because you can't get 80+ with single_age_pop = TRUE
+pop.o80 <- get_population(age_group_id = c( 21), location_id = india.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step2')
+pop.all <- rbind(pop.all, pop.o80, use.names = T)
 dir.create(paste0(out.dir, '/population_single_age/india_splitting_locs/'), showWarnings = F)
 invisible(lapply(india.locs, function(c.location_id) {
   out.pop <- copy(pop[location_id == c.location_id])
@@ -82,7 +84,7 @@ invisible(lapply(epp.locs, function(c.location_id) {
 }))
 
 ## Migration
-## TODO: migration filepath needs to be updated for GBD 2019
+## TODO: migration filepath needs to be updated for GBD 2019 decomp 3
 mig <- fread(paste0('/ihme/fertilitypop/gbd_2017/population/modeling/popReconstruct/v96/best/net_migrants.csv'))
 setnames(mig, c('year_id', 'sex_id'), c('year', 'sex'))
 mig[age > 80, age := 80]
@@ -145,36 +147,37 @@ invisible(lapply(epp.locs, function(c.location_id) {
 }))
 
 ## Prep CoD data and case notifications
-cod.dt <- get_cod_data(cause_id = 298, decomp_step = 'step2')
-cod.dt <- cod.dt[data_type == 'Vital Registration']
-cod.dt <- cod.dt[, list(model = 'VR', type = 'point', deaths = sum(deaths), rate = weighted.mean(x = rate, w = pop)), by = .(location_id, year, age_group_id, sex)]
-cod.dt <- cod.dt[age_group_id != 27]
-cod.dt <- melt(cod.dt, id.vars = c('location_id', 'age_group_id', 'type', 'year', 'sex', 'model'))
-setnames(cod.dt, c('variable', 'value'), c('metric', 'mean'))
-cod.dt[, c('lower', 'upper') := .(NA, NA)]
-cod.dt <- merge(cod.dt, loc.table[, list(ihme_loc_id, location_id)], by = c('location_id'))
-cod.dt[, location_id := NULL]
-cod.dt[metric == 'deaths', metric := 'Count']
-cod.dt[metric == 'rate', metric:= 'Rate']
-cod.dt[, indicator := 'Deaths']
-setnames(cod.dt, 'sex', 'sex_id')
-cod.dt[, sex := ifelse(sex_id == 1, 'male', 'female')]
-cod.dt[,sex_id := NULL]
-cod.dt <- merge(cod.dt, age.map[,.(age_group_id, age = age_group_name_short)], by = 'age_group_id')
+if(run.group2 == TRUE){
+  cod.dt <- get_cod_data(cause_id = 298, decomp_step = 'step2')
+  cod.dt <- cod.dt[data_type == 'Vital Registration']
+  cod.dt <- cod.dt[, list(model = 'VR', type = 'point', deaths = sum(deaths), rate = weighted.mean(x = rate, w = pop)), by = .(location_id, year, age_group_id, sex)]
+  cod.dt <- cod.dt[age_group_id != 27]
+  cod.dt <- melt(cod.dt, id.vars = c('location_id', 'age_group_id', 'type', 'year', 'sex', 'model'))
+  setnames(cod.dt, c('variable', 'value'), c('metric', 'mean'))
+  cod.dt[, c('lower', 'upper') := .(NA, NA)]
+  cod.dt <- merge(cod.dt, loc.table[, list(ihme_loc_id, location_id)], by = c('location_id'))
+  cod.dt[, location_id := NULL]
+  cod.dt[metric == 'deaths', metric := 'Count']
+  cod.dt[metric == 'rate', metric:= 'Rate']
+  cod.dt[, indicator := 'Deaths']
+  setnames(cod.dt, 'sex', 'sex_id')
+  cod.dt[, sex := ifelse(sex_id == 1, 'male', 'female')]
+  cod.dt[,sex_id := NULL]
+  cod.dt <- merge(cod.dt, age.map[,.(age_group_id, age = age_group_name_short)], by = 'age_group_id')
+  
+  diagn.dt <- fread(paste0('/ihme/hiv/results_comparison/comparison_data/high_income_incidence_extractions/combined_high_income_cases_outlier.csv'))
+  diagn.dt <- diagn.dt[outlier == 0, .(sex_id, ihme_loc_id, mean = cases, year, age = 'All Ages', age_group_id = 22, model = 'Case Report', type = 'point', metric = 'Count', indicator = 'Incidence', lower = NA, upper = NA)]
+  diagn.dt[sex_id == 3, sex := 'both']
+  diagn.dt[sex_id == 2, sex := 'female']
+  diagn.dt[sex_id == 1, sex := 'male']
+  diagn.dt[, sex_id := NULL]
+  
+  group2.fitdata <- rbind(cod.dt, diagn.dt, use.names = T)
+  dir.create(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/'), showWarnings = F, recursive = T)
+  invisible(lapply(unique(group2.fitdata$ihme_loc_id), function(loc){
+    write.csv(group2.fitdata[ihme_loc_id == loc], paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'), row.names = F)
+  }))
 
-diagn.dt <- fread(paste0('/ihme/hiv/results_comparison/comparison_data/high_income_incidence_extractions/combined_high_income_cases_outlier.csv'))
-diagn.dt <- diagn.dt[outlier == 0, .(sex_id, ihme_loc_id, mean = cases, year, age = 'All Ages', age_group_id = 22, model = 'Case Report', type = 'point', metric = 'Count', indicator = 'Incidence', lower = NA, upper = NA)]
-diagn.dt[sex_id == 3, sex := 'both']
-diagn.dt[sex_id == 2, sex := 'female']
-diagn.dt[sex_id == 1, sex := 'male']
-diagn.dt[, sex_id := NULL]
-
-group2.fitdata <- rbind(cod.dt, diagn.dt, use.names = T)
-dir.create(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/'), showWarnings = F, recursive = T)
-invisible(lapply(unique(group2.fitdata$ihme_loc_id), function(loc){
-  write.csv(group2.fitdata[ihme_loc_id == loc], paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'), row.names = F)
-}))
-
-
+}
 
 

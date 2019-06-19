@@ -313,15 +313,22 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   }
   
   art <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/childARTcoverage/', loc, '.csv'))
+  art <- extend.years(art, years)
+  if(min(art$year) > start.year){
+    backfill <- data.table(year = start.year:(min(art$year) - 1))
+    backfill <- backfill[, names(art)[!names(art) == 'year'] := 0]
+    art <- rbind(art, backfill, use.names = T)
+  }
+  art <- art[order(year)]
   art[,art_isperc := ifelse(ART_cov_pct > 0, TRUE, FALSE)]
   art[,cotrim_isperc := ifelse(Cotrim_cov_pct > 0, TRUE, FALSE)]
-  artpaed <- art[,ART_cov_num]
+  artpaed <- ifelse(art$art_isperc, art[,ART_cov_pct], art[,ART_cov_num])
   names(artpaed) <- art$year
   attr(dt, 'specfp')$artpaed_num <- artpaed
   art_isperc <- art[,art_isperc]
   names(art_isperc) <- art$year
   attr(dt, 'specfp')$artpaed_isperc <- art_isperc
-  cotrim <- art[,Cotrim_cov_num]
+  cotrim <-  ifelse(art$cotrim_isperc, art[,Cotrim_cov_pct], art[,Cotrim_cov_num])
   names(cotrim) <- art$year
   attr(dt, 'specfp')$cotrim_num <- cotrim
   cotrim_isperc <- art[,cotrim_isperc]
@@ -341,6 +348,12 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   artelig <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/childARTeligibility/', substr(loc, 1, 3), '.csv'))
   artelig <- artelig[year %in% years]
   artelig <- extend.years(artelig, years)  
+  if(min(artelig$year) > start.year){
+    backfill <- data.table(year = start.year:(min(artelig$year) - 1))
+    backfill <- backfill[, names(artelig)[!names(artelig) == 'year'] := 0]
+    artelig <- rbind(artelig, backfill, use.names = T)
+  }
+  artelig <- artelig[order(year)]
   artelig[age == 'LT11mos', age_start := 0]
   artelig[age == '12to35mos', age_start := 1]
   artelig[age == '35to59mos', age_start := 3]
@@ -356,6 +369,12 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   pmtct <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/PMTCT/', loc, '.csv'))
   pmtct <- pmtct[year %in% years]
   pmtct <- extend.years(pmtct, years)
+  if(min(pmtct$year) > start.year){
+    backfill <- data.table(year = start.year:(min(pmtct$year) - 1))
+    backfill <- backfill[, names(pmtct)[!names(pmtct) == 'year'] := 0]
+    pmtct <- rbind(pmtct, backfill, use.names = T)
+  }
+  pmtct <- pmtct[order(year)]
   pmtct_num <- data.table(year = years)
   pmtct_isperc <- data.table(year = years)
   for(var in c('tripleARTdurPreg', 'tripleARTbefPreg', 'singleDoseNevir', 'prenat_optionB', 'prenat_optionA', 'postnat_optionB', 'postnat_optionA', 'dualARV')){
@@ -562,10 +581,15 @@ sub.prev <- function(loc, dt){
 
 sub.prev.granular <- function(dt, loc){
   ## TODO: Add this to cache prev
-  age.prev.dt <- fread('/homes/tahvif/age_prev_surveys.csv')
+  age.prev.dt <- fread(paste0("/ihme/hiv/epp_input/gbd19/", run.name, "/prev_surveys.csv"))
   age.prev.dt <- age.prev.dt[iso3 == loc]
-  age.prev.dt[, agegr := paste0(age_year, '-', age_year+4)]
-  age.prev.dt[,sex := ifelse(sex_id == 1, 'male', 'female')]
+  age.prev.dt <- age.prev.dt[age_year %in% 15:59 | age_year == '15-49']
+
+  age.prev.dt[!age_year == '15-49', agegr := paste0(age_year, '-', as.numeric(age_year)+4)]
+  age.prev.dt[age_year == '15-49', agegr := '15-49']
+  age.prev.dt[sex_id == 1, sex := 'male']
+  age.prev.dt[sex_id == 2, sex := 'female']
+  age.prev.dt[sex_id == 3, sex := 'both']
   age.prev.dt[,c('used','deff', 'deff_approx') := list(TRUE,2, 2)]
   age.prev.dt <- age.prev.dt[,.(year, sex, agegr, n, prev, se, used, deff, deff_approx)]
   gen.pop.dict <- c("General Population", "General population", "GP", "GENERAL POPULATION", "GEN. POPL.", "General population(Low Risk)", "Remaining Pop")

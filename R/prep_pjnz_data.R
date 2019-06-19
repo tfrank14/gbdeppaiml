@@ -52,8 +52,7 @@ prepare_spec_object <- function(loc, popadjust = TRUE, popupdate=TRUE, use_ep5=F
     popadjust <- length(eppd) > 1
   }
 
-  
-  ## TODO: Run this after subbing into projp and demp
+
   specfp <- create_spectrum_fixpar(projp, demp, popadjust=popadjust, time_epi_start=epp_t0)
   
   specfp$ss$time_epi_start <- epp_t0

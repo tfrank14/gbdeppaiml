@@ -13,7 +13,7 @@ args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
 	run.name <- args[1]
 } else {
-	run.name <- '190129_rspline_1549dat'
+	run.name <- '190503_all'
 }
 
 ### Paths
@@ -37,7 +37,7 @@ gbd.locs <- loc.table$ihme_loc_id
 geos_dir <- paste0("/ihme/limited_use/LIMITED_USE/LU_GEOSPATIAL/geo_matched/hiv_gbd/Archive/")
 versions <- grep("[[:digit:]]*\\.[[:digit:]]*\\.[[:digit:]]*", list.dirs(geos_dir, full.names=F), value=T)
 newest <- versions[which.max(as.Date(versions, format="%m.%d.%y"))]
-load(dir(paste0(geos_dir, newest), pattern=".Rdata", full.names=T)[1])
+load(paste0('/ihme/limited_use/LIMITED_USE/LU_GEOSPATIAL/geo_matched/hiv_gbd/Archive/03.15.18/2018_03_15.Rdata'))
 setnames(gbd_all, "country", "iso3")
 data3 <- gbd_all[between(age_year, 15, 49) & !is.na(iso3) & !is.na(hiv_test) & !is.na(hiv_weight),]
 # Kenya

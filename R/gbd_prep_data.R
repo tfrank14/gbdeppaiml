@@ -11,6 +11,15 @@ find_pjnz <- function(loc){
   loc.name <- loc.table[ihme_loc_id == temp.loc, location_name]
   
   unaids.year <- loc.table[ihme_loc_id == temp.loc, unaids_recent]
+  ## Only using 2017 and prior for decomp 3
+  if(unaids.year == 2018){
+    for(c.year in c(2017, 2015, 2013)){
+      if(loc.table[ihme_loc_id == loc, get(paste0('unaids_', c.year))] == TRUE){
+        unaids.year = c.year
+        break
+      }
+    }
+  }
   ## TODO: What is wrong with the 2018 ZAF file?
   if(grepl('ZAF', loc)){unaids.year = 2017}
   if(unaids.year %in% 2017:2018) {
@@ -100,8 +109,9 @@ collapse_epp <- function(loc){
   
   # anc.used (append)
   eppd.tot[[subpop.tot]]$anc.used <- unlist(lapply(eppd.list, function(eppd) {
-    subpop <- names(eppd)
     anc.used <- eppd$anc.used
+    names(anc.used) <- rownames(eppd$anc.prev)
+    return(anc.used)
   }))
   
   # anc.prev (append)

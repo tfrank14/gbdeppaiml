@@ -15,6 +15,7 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
       demp <- create_spectrum_demog_param(loc, start.year, stop.year)
       projp <- create_hivproj_param(loc, start.year, stop.year)
       attr(dt, 'specfp') <- create_spectrum_fixpar(projp, demp, proj_start = start.year, proj_end = stop.year, popadjust=popadjust)
+      attr(dt, 'specfp')$tsEpidemicStart <- 1985
     }
       specfp <- sub.pop.params.specfp(attr(dt, 'specfp'), loc, i)
       specfp <- update_spectrum_fixpar(specfp, proj_start = start.year, proj_end = stop.year,time_epi_start = specfp$ss$time_epi_start, popadjust=popadjust)
@@ -44,7 +45,7 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
       print("Substituting prevalence surveys")
       if(age.prev){
         dt <- sub.prev.granular(dt, loc)
-        attr(dt, 'specfp')$fitincrr <- 'linincrr'
+        attr(dt, 'specfp')$fitincrr <- 'regincrr'
       } else{
         dt <- sub.prev(loc, dt)	
         attr(dt, 'specfp')$fitincrr <- FALSE
@@ -100,6 +101,7 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
       attr(dt, 'eppd')$ancrtcens <- NULL
     }
     attr(dt, 'specfp')$prior_args <- list(logiota.unif.prior = c(log(1e-14), log(0.000025)))
+    attr(dt, 'specfp')$group <- '1'
   }else{
     ## Group 2 inputs
     print('Appending vital registration death data')
@@ -189,6 +191,8 @@ update_spectrum_fixpar <- function(specfp, hiv_steps_per_year = 10L, proj_start 
   specfp$SIM_YEARS <- ss$PROJ_YEARS
   specfp$proj.steps <- proj_start + 0.5 + 0:(ss$hiv_steps_per_year * (specfp$SIM_YEARS-1)) / ss$hiv_steps_per_year
   
+  specfp$frr_cd4 = specfp$frr_cd4[,,1:specfp$SIM_YEARS]
+  specfp$frr_art = specfp$frr_art[,,,1:specfp$SIM_YEARS]
   ## ######################## ##
   ##  Demographic parameters  ##
   ## ######################## ##

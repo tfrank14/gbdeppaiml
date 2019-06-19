@@ -3,7 +3,7 @@ rm(list=ls())
 windows <- Sys.info()[1][["sysname"]]=="Windows"
 root <- ifelse(windows,"J:/","/home/j/")
 user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
-code.dir <- paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/gbdeppaiml/")
+code.dir <- paste0(ifelse(windows, "H:", paste0("/ihme/homes/", user)), "/gbdeppaiml/")
 ## Packages
 library(data.table); library(mvtnorm); library(survey); library(ggplot2); library(plyr)
 
@@ -17,8 +17,8 @@ if(length(args) > 0) {
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
   paediatric <- as.logical(args[4])
 } else {
-	run.name <- "190503_all"
-	loc <- "AUS"
+	run.name <- "190613_quetzal"
+	loc <- "GNB"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- TRUE
@@ -42,13 +42,12 @@ age.prev <- c.args[['age_prev']]
 popadjust <- c.args[['popadjust']]
 anc.rt <- c.args[['anc_rt']]
 epp.mod <- c.args[['epp_mod']]
-
 ### Paths
 out.dir <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, "/", loc)
 
 ### Functions
 library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
-setwd(paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/eppasm/"))
+setwd(paste0(ifelse(windows, "H:", paste0("/ihme/homes/", user)), "/eppasm/"))
 devtools::load_all()
 setwd(code.dir)
 devtools::load_all()
@@ -65,9 +64,20 @@ dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub,
 
 if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 
-epp.mod <- 'rlogistic'
+if(grepl('NGA', loc)){
+  temp = readRDS('/ihme/homes/tahvif/MWI_dt.rds')
+  temp.frr <- attr(temp, 'specfp')$frr_cd4
+  temp.frr.art <- attr(temp, 'specfp')$frr_art
+  attr(dt, 'specfp')$frr_cd4 <- temp.frr
+  attr(dt, 'specfp')$frr_art <- temp.frr.art
+}
+## TODO - fix ancsitedat in BEN, MOZ, ZWE, ZMB, TGO, SEN, MDG, NER, NAM, GMB, GHA, SLE, CIV
+attr(dt, 'eppd')$ancsitedat = unique(attr(dt, 'eppd')$ancsitedat)
+## TODO - fix se = 0 data points in ZAF
+attr(dt, 'eppd')$hhs <- attr(dt, 'eppd')$hhs[!attr(dt, 'eppd')$hhs$se == 0,]
+attr(dt, 'specfp')$relinfectART <- 0.3
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0=1e4, B = 1e3, number_k = 50)
+fit <- fitmod(dt, eppmod = epp.mod, B0=1e5, B = 1e3, number_k = 500)
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)

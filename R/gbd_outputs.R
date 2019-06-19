@@ -42,17 +42,15 @@ gbd_sim_mod <-  function(fit, rwproj=fit$fp$eppmod == "rspline", VERSION = 'C'){
       ## replace rvec with random-walk simulated rvec
       fit$param <- lapply(fit$param, function(par){par$rvec <- epp:::sim_rvec_rwproj(par$rvec, firstidx, lastidx, dt); par})
     }
-    
-    fp.list <- lapply(fit$param, function(par) update(fit$fp, list=par))
+    fit$fp$incrr_age <- fit$fp$incrr_age[,,1:fit$fp$SIM_YEARS]
+    fp.list <- lapply(fit$param, function(par) update(fit$fp, list=par, keep.attr = FALSE))
     fp.draw <- fp.list[[rand.draw]]
   }else{
     fp.draw <- fit$fp
     theta <- fit$resample[rand.draw,]
-    # fp.draw$art_mort <- fp.draw$art_mort * exp(theta[2])
     fp.draw$cd4_mort_adjust <- exp(theta[1])
-    fp.draw$cd4_mort_adjust <- 1
     incrr_nparam <- getnparam_incrr(fp.draw)
-    paramcurr <- 2
+    paramcurr <- 1
     if(incrr_nparam > 0){
       fp.draw$incrr_sex = fp.draw$incrr_sex[1:fp.draw$SIM_YEARS]
       fp.draw$incrr_age = fp.draw$incrr_age[,,1:fp.draw$SIM_YEARS]
@@ -67,7 +65,7 @@ gbd_sim_mod <-  function(fit, rwproj=fit$fp$eppmod == "rspline", VERSION = 'C'){
     
     
   }
-
+  if(length(fp.draw$tsEpidemicStart) == 0){fp.draw$tsEpidemicStart = 1985}
   mod <- simmod(fp.draw, VERSION = VERSION)
   attr(mod, 'theta') <- fit$resample[rand.draw,]
   return(mod)
@@ -344,8 +342,9 @@ get_summary <- function(output, loc, run.name, paediatric = FALSE){
   output[,c('pop_gt350', 'pop_200to350', 'pop_lt200', 'birth_prev', 'pop_neg', 'hiv_births', 'total_births') := NULL]
   output.count <- melt(output, id.vars = c('age', 'sex', 'year', 'pop', 'run_num'))
   
-  ##TODO: Write out age map in launch script
-  age.map <- get_age_map()
+
+  age.map <- fread(paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/age_map.csv"))
+  age.map[age_group_name_short == 'All', age_group_name_short := 'All']
   if(!paediatric){
     age.spec <- age.map[age_group_id %in% 8:21,.(age_group_id, age = age_group_name_short)]
     age.spec[, age := as.integer(age)]
@@ -401,16 +400,21 @@ get_summary <- function(output, loc, run.name, paediatric = FALSE){
 ## Get data from eppd object, save for future plotting
 save_data <- function(loc, eppd, run.name){
   age.map <-  fread(paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/age_map.csv"))
-  prevdata <- data.table(eppd$hhs)
-  prevdata <- prevdata[,.(sex, agegr, type = 'point', model = 'Household Survey', indicator = 'Prevalence', mean = prev, upper = prev + (1.96 * se), lower = ifelse(prev - (1.96 * se) < 0, 0, prev - (1.96 * se)), year)]
-  if(exists('agegr', where = prevdata)){
-    setnames(prevdata, 'agegr', 'age')
-    if('15-49' %in% prevdata$age){
-      prevdata[age == '15-49', age_group_id := 24]
-    }else{
-      prevdata[,age:=sapply(strsplit(age, "-"), "[[", 1)]
+  if(nrow(eppd$hhs) > 0){
+    prevdata <- data.table(eppd$hhs)
+    prevdata <- prevdata[,.(sex, agegr, type = 'point', model = 'Household Survey', indicator = 'Prevalence', mean = prev, upper = prev + (1.96 * se), lower = ifelse(prev - (1.96 * se) < 0, 0, prev - (1.96 * se)), year)]
+    if(exists('agegr', where = prevdata)){
+      prevdata.agg <- prevdata[agegr == '15-49']
+      prevdata.agg[, age_group_id := 24]
+      prevdata.agg[, age := '15-49']
+      prevdata <- prevdata[!agegr == '15-49']
+      prevdata[,age:=sapply(strsplit(agegr, "-"), "[[", 1)]
       prevdata <- merge(prevdata, age.map[,.(age = age_group_name_short, age_group_id)],  by = 'age')
+      prevdata <- rbind(prevdata, prevdata.agg, use.names = T)
+      prevdata[, agegr  := NULL]
     }
+  }else{
+    prevdata <- NULL
   }
   
   ancdata <- data.table(eppd$ancsitedat)
