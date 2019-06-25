@@ -56,6 +56,18 @@ prepare_spec_object <- function(loc, popadjust = TRUE, popupdate=TRUE, use_ep5=F
   specfp <- create_spectrum_fixpar(projp, demp, popadjust=popadjust, time_epi_start=epp_t0)
   
   specfp$ss$time_epi_start <- epp_t0
+  
+  temp.anc <- data.table(eppd$ancsitedat)
+  temp.anc <- temp.anc[!grepl('Pseudo', site)]
+  eppd$ancsitedat <- data.frame(temp.anc)
+  temp.anc <- eppd$anc.prev
+  temp.anc <- temp.anc[!grepl('Pseudo', rownames(temp.anc)),]
+  eppd$anc.prev <- temp.anc
+  temp.anc <- eppd$anc.n
+  temp.anc <- temp.anc[!grepl('Pseudo', rownames(temp.anc)),]
+  eppd$anc.n <- temp.anc
+  eppd$anc.used <- eppd$anc.used[!grepl('Pseudo', names(eppd$anc.used))]
+  
   ## output
   val <- list()
   attr(val, 'eppd') <- eppd
@@ -162,7 +174,6 @@ create_hivproj_param <- function(loc, start.year = 1970, stop.year = 2019){
   frr_scalar <- 1.0
 
   ## Currently subbing in GBD sex incrr parameters, if they exist
-  ## TODO: Create placeholder sex incrr for non-India locations
   if(grepl('IND', loc)){
     temp.loc <- loc.table[parent_id == loc.table[ihme_loc_id == loc, location_id], ihme_loc_id][1]
     incrr_sex <- fread(paste0('/ihme/hiv/spectrum_input/FtoM_inc_ratio/', temp.loc, '.csv'))
@@ -197,10 +208,9 @@ create_hivproj_param <- function(loc, start.year = 1970, stop.year = 2019){
 
   ## Using CD4 initial distribution and median CD4 placeholder
   ## TODO: How are these estimated? How should we fill these?
+  artmx_timerr <- temp.projp$artmx_timerr
   cd4_initdist <- temp.projp$cd4_initdist
   art_alloc_method <- as.integer(1)
-  art_prop_alloc <- c(0.5, 0.5)
-  names(art_prop_alloc) <- c('mx', 'elig')
   scale_cd4_mort <- as.integer(0)
   art15plus_eligthresh <- fread(paste0('/share/hiv/spectrum_input/180531_numbat/adultARTeligibility/', temp.loc, '.csv'))
   art15plus_eligthresh[year >= 2016, cd4_threshold := 999]
@@ -217,7 +227,7 @@ create_hivproj_param <- function(loc, start.year = 1970, stop.year = 2019){
   cd4_prog <- array(0, c(6, 4, 2))
   cd4_mort <- array(0, c(7, 4, 2))
   art_mort <- array(0, c(3, 7, 4, 2))
-  artmx_timerr <- array(1, c(3, length(proj.years)))
+
   median_cd4init <- rep(0, length(proj.years))
   names(median_cd4init) <- proj.years
 
@@ -326,8 +336,8 @@ create_hivproj_param <- function(loc, start.year = 1970, stop.year = 2019){
                                 CD4cat = c("CD4_1000", "CD4_750",  "CD4_500",  "CD4_350",  "CD4_200",  "CD4_0"),
                                 Sex = c('Male', 'Female'),
                                 Year = paste0(proj.years))
-  ##TODO fix this NOTE Using test run directory
-  dir <- paste0('/share/hiv/epp_input/gbd19/181126_test/')
+
+  dir <- paste0('/share/hiv/epp_input/gbd19/', run.name)
   pop <- fread(paste0(dir, '/population_single_age/', loc, '.csv'))
   pop <- pop[age_group_id == 14 + 48]
   pop <- pop[,.(year = year_id, sex_id, population)]
@@ -361,7 +371,6 @@ create_hivproj_param <- function(loc, start.year = 1970, stop.year = 2019){
                 "artelig_specpop" = artelig_specpop,
                 "median_cd4init" = median_cd4init,
                 art_alloc_method = art_alloc_method,
-                art_prop_alloc = art_prop_alloc,
                 scale_cd4_mort = scale_cd4_mort,
                 "art_dropout" = art_dropout,
                 "verttrans" = verttrans,

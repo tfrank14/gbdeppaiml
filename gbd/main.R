@@ -1,3 +1,5 @@
+## Tahvi Frank
+## tahvif@uw.edu/tahvif@gmail.com
 ### Setup
 rm(list=ls())
 windows <- Sys.info()[1][["sysname"]]=="Windows"
@@ -17,8 +19,8 @@ if(length(args) > 0) {
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
   paediatric <- as.logical(args[4])
 } else {
-	run.name <- "190613_quetzal"
-	loc <- "GNB"
+	run.name <- "190620_quetzal2"
+	loc <- "NGA_25338"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- TRUE
@@ -70,14 +72,23 @@ if(grepl('NGA', loc)){
   temp.frr.art <- attr(temp, 'specfp')$frr_art
   attr(dt, 'specfp')$frr_cd4 <- temp.frr
   attr(dt, 'specfp')$frr_art <- temp.frr.art
+  temp <- attr(dt, 'specfp')$paedsurv_artcd4dist
+  temp[temp < 0] <- 0
+  attr(dt, 'specfp')$paedsurv_artcd4dist <- temp
 }
 ## TODO - fix ancsitedat in BEN, MOZ, ZWE, ZMB, TGO, SEN, MDG, NER, NAM, GMB, GHA, SLE, CIV
 attr(dt, 'eppd')$ancsitedat = unique(attr(dt, 'eppd')$ancsitedat)
 ## TODO - fix se = 0 data points in ZAF
 attr(dt, 'eppd')$hhs <- attr(dt, 'eppd')$hhs[!attr(dt, 'eppd')$hhs$se == 0,]
 attr(dt, 'specfp')$relinfectART <- 0.3
+
+data.path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
+if(!file.exists(data.path)){
+  save_data(loc, attr(dt, 'eppd'), run.name)
+}
+
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0=1e5, B = 1e3, number_k = 500)
+fit <- fitmod(dt, eppmod = epp.mod, B0=1e3, B = 1e2, number_k = 5)
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)
@@ -88,10 +99,6 @@ if(epp.mod == 'rhybrid'){
 
 ## Simulate model for all resamples, choose a random draw, get gbd outputs
 result <- gbd_sim_mod(fit, VERSION = 'R')
-data.path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
-if(!file.exists(data.path)){
-  save_data(loc, attr(dt, 'eppd'), run.name)
-}
 output.dt <- get_gbd_outputs(result, attr(dt, 'specfp'), paediatric = paediatric)
 output.dt[,run_num := i]
 

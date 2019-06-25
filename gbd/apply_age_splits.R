@@ -12,7 +12,7 @@ if(length(args) > 0) {
   run.name <- args[2]
   spec.name <- args[3]
 } else {
-  loc <- "NGA_25338"
+  loc <- "MWI"
   run.name <- "190613_quetzal"
   spec.name <- "190613_quetzal"
 }
@@ -173,7 +173,9 @@ convert_to_rate_2 <- function(x) {
 } 
 
 shift_to_midyear <- function(x) {
-  x_lag <- c(0, shift(x, type = "lag")[-1])
+  ## TODO we need to revisit repeating the last year
+  x_last <- x[length(x)]
+  x_lag <- c(shift(x, type = "lead")[-length(x)], x_last)
   out_x <- (x + x_lag) / 2
   return(out_x)
 }
@@ -194,11 +196,12 @@ setnames(spec_combined_last, "spec_pop", "spec_pop_last")
 
 spec_combined <- merge(spec_combined, spec_combined_last, by=c("year", "sex_id", "run_num", "age_group_id"))
 
-convert_vars <- c("suscept_pop","pop_neg","pop_lt200","pop_200to350","pop_gt350","pop_art")
+## Shift HIV incidence and deaths
+## EPPASM output infections and deaths are midyear-to-midyear
+## We want incidence and deaths to be calendar year, and populations to be midyear
+convert_vars <- c('non_hiv_deaths', 'hiv_deaths', 'new_hiv', 'hiv_births', 'total_births')
+spec_combined[,(convert_vars) := lapply(.SD,shift_to_midyear),.SDcols=convert_vars, by=c("sex_id", "run_num", "age_group_id")] 
 spec_combined[,(convert_vars) := lapply(.SD,convert_to_rate),.SDcols=convert_vars] 
-# spec_combined[,(convert_vars) := lapply(.SD,shift_to_midyear),.SDcols=convert_vars, by=c("sex_id", "run_num", "age_group_id")] 
-convert_vars2  <- c(inc_vars,death_vars,"non_hiv_deaths", "hiv_births","total_births")
-spec_combined[,(convert_vars2) := lapply(.SD,convert_to_rate_2),.SDcols=convert_vars2] 
 print(head(spec_combined))
 
 
