@@ -167,7 +167,7 @@ append.deaths <- function(dt, loc, run.name, start.year, stop.year){
   deaths <- rbind(backfill, deaths)
   deaths <- deaths[order(year_id, age)]
   deaths <- dcast.data.table(deaths, year_id + age ~ sex_id, value.var = 'value')
-
+  
   ## rep 10x for spectrum timesteps (if we're removing deaths directly from population...)
   deaths_dt <- array(0, c(66,2,(length(years) -1) * 10))
   for(j in 1:(length(years) - 1)){
@@ -294,9 +294,9 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   dimnames(attr(dt, 'specfp')$cd4_mort_u5) <- list(birth_category = c("BF0", "BF12", "BF7", "perinatal"), cat = 1:7, age = paste0(0:4), sex = c('Male', 'Female'))
   for(c.sex in c('Male', 'Female')){
     for(c.age in paste0(0:4)){
-        mort.mat <- mortu5[age == c.age]
-        mort.mat <- as.matrix(mort.mat[,c('birth_category', 'age') := NULL])
-        attr(dt, 'specfp')$cd4_mort_u5[,,c.age, c.sex] <- mort.mat
+      mort.mat <- mortu5[age == c.age]
+      mort.mat <- as.matrix(mort.mat[,c('birth_category', 'age') := NULL])
+      attr(dt, 'specfp')$cd4_mort_u5[,,c.age, c.sex] <- mort.mat
     }
   }
   mortu15 <- mort.offart[age %in% 5:14]
@@ -436,7 +436,7 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
 
 sub.pop.params.specfp <- function(fp, loc, k){
   dir <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/')
-
+  
   ## Population
   years <- start.year:stop.year
   pop <- fread(paste0(dir, '/population_single_age/', loc, '.csv'))
@@ -571,7 +571,7 @@ sub.prev <- function(loc, dt){
     if(!length(dt)){
       attr(dt, 'eppd')$hhs <- as.data.frame(data4[, .(year, sex, agegr, n, prev, se, used, deff, deff_approx)])
     } else{
-        attr(dt[[gen.pop.i]], 'eppd')$hhs <- as.data.frame(data4[, .(year, sex, agegr, n, prev, se, used, deff, deff_approx)])
+      attr(dt[[gen.pop.i]], 'eppd')$hhs <- as.data.frame(data4[, .(year, sex, agegr, n, prev, se, used, deff, deff_approx)])
     }
   } else { 
     print(paste0("No surveys for ",loc))
@@ -584,7 +584,7 @@ sub.prev.granular <- function(dt, loc){
   age.prev.dt <- fread(paste0("/ihme/hiv/epp_input/gbd19/", run.name, "/prev_surveys.csv"))
   age.prev.dt <- age.prev.dt[iso3 == loc]
   age.prev.dt <- age.prev.dt[age_year %in% 15:59 | age_year == '15-49']
-
+  
   age.prev.dt[!age_year == '15-49', agegr := paste0(age_year, '-', as.numeric(age_year)+4)]
   age.prev.dt[age_year == '15-49', agegr := '15-49']
   age.prev.dt[sex_id == 1, sex := 'male']
@@ -636,19 +636,19 @@ sub.off.art <- function(dt, loc, k) {
   dimnames(replace) <- list(cd4stage = paste0(1:7), agecat = age.list, sex = c('Male', 'Female'))
   for(c.sex in c('Male', 'Female')){
     for(c.ageindex in 1:length(age.list)){
-        for(c.cd4 in paste0(1:7)){
-          replace[c.cd4, c.ageindex, c.sex] = as.numeric(mortnoart[age == age.index[[c.ageindex]] & cat == c.cd4, risk])
+      for(c.cd4 in paste0(1:7)){
+        replace[c.cd4, c.ageindex, c.sex] = as.numeric(mortnoart[age == age.index[[c.ageindex]] & cat == c.cd4, risk])
       }
     }
   }  
   if(!length(dt)){
     attr(dt, 'specfp')$cd4_mort <- replace
   } else{
-      for (n in names(dt)) {
-        for(i in 1:7){
-          attr(dt[[n]], 'specfp')$cd4_mort <- replace
-        }
+    for (n in names(dt)) {
+      for(i in 1:7){
+        attr(dt[[n]], 'specfp')$cd4_mort <- replace
       }
+    }
   }
   return(dt)
 }
@@ -658,10 +658,10 @@ sub.on.art <- function(dt, loc, k) {
   mortart <- melt(mortart, 
                   id = c("durationart", "cd4_category", "age", "sex","cd4_lower",
                          "cd4_upper"))
-
+  
   setnames(mortart, c("variable","value","cd4_category"),c("draw","mort","cd4"))
   # mortart <- mortart[age!="55-100",]
-
+  
   mortart <- mortart[draw==paste0('mort',k),]
   mortart[,sex := as.character(sex)]
   mortart[, sex := ifelse(sex == 1, 'Male', 'Female')]
@@ -699,7 +699,7 @@ sub.on.art <- function(dt, loc, k) {
     for(c.ageindex in 1:length(age.list)){
       for(c.dur in c('ART0MOS', 'ART6MOS', 'ART1YR')){
         for(c.cd4 in paste0(1:7)){
-            replace[c.dur, c.cd4, c.ageindex, c.sex] = as.numeric(mortart[sex == c.sex & artdur == c.dur & agecat == age.index[[c.ageindex]] & cd4stage == c.cd4, risk])
+          replace[c.dur, c.cd4, c.ageindex, c.sex] = as.numeric(mortart[sex == c.sex & artdur == c.dur & agecat == age.index[[c.ageindex]] & cd4stage == c.cd4, risk])
         }
       }
     }
@@ -707,9 +707,9 @@ sub.on.art <- function(dt, loc, k) {
   if(!length(dt)){
     attr(dt, 'specfp')$art_mort <- replace
   } else{
-      for(n in names(dt)){
-        attr(dt[[n]], 'specfp')$art_mort <- replace
-      }
+    for(n in names(dt)){
+      attr(dt[[n]], 'specfp')$art_mort <- replace
+    }
   }
   return(dt)
 }
@@ -749,182 +749,294 @@ sub.cd4.prog <- function(dt, loc, k){
   if(!length(dt)){
     attr(dt, 'specfp')$cd4_prog <- replace
   } else{
-      for (n in names(dt)) {
-        attr(dt[[n]], 'specfp')$cd4_prog <- replace
-      }	
+    for (n in names(dt)) {
+      attr(dt[[n]], 'specfp')$cd4_prog <- replace
+    }	
   }
   return(dt)
 }
 
-sub.anc <- function(loc, dt, i) {
+sub.anc <- function(loc, dt, i, uncertainty) {
   # Make adjustments to ANC coming from PJNZ files ** add more **
   ## Prep EPP data
   # Choose subpopulation for substitution
-  gen.pop.dict <- c("General Population", "General population", "GP", "GENERAL POPULATION", "GEN. POPL.", "General population(Low Risk)", "Remaining Pop")
-  if(length(names(dt)) > 1) {
-    gen.pop <- names(dt)[names(dt) %in% gen.pop.dict]     
-  } else {
-    gen.pop <- 1
-  }
- 
-  if(!length(dt)){
+  if(geoadjust){
+    print("using LBD Adjustment")
+    
+    ##Bring in the matched data - reading in as CSV rather then fread because the latter seems to add quotations when there are escape characters, which messes up the matching
+    anc.dt.all <- read.csv(paste0('/share/hiv/data/lbd_anc/', loc, '_ANC_matched.csv')) %>% data.table()
+    anc.dt.all  <- anc.dt.all[,c( "clinic","year_id","mean","site_pred","adm0_mean","adm0_lower", "adm0_upper","subpop","high_risk")]
+    setnames(anc.dt.all,c("clinic","year_id"),c("site","year"))
     eppd <- attr(dt, "eppd")
-  } else{
-    eppd <- attr(dt[[gen.pop]], "eppd")
-  }
   
-
-  if(grepl("ZAF", loc) | grepl("SWZ", loc)) {
-    # Collapse up to single provincial ANC site
+    # Collapse up to single provincial ANC site for ZAF and SWZ
     # Extract first year of data and use that site as provincial site
-    first.year <- min(as.integer(colnames(eppd$anc.prev)[sapply(colnames(eppd$anc.prev), function(col) {
-      !all(is.na(eppd$anc.prev[, col]))
-    })]))
-    prov.sites <- which(!is.na(eppd$anc.prev[, as.character(first.year)]))
-    for(i in 1:length(prov.sites)) {
-      prov.site <- prov.sites[i]
-      row.lower <- prov.sites[i] + 1
-      row.upper <- ifelse(i == length(prov.sites), nrow(eppd$anc.prev), prov.sites[i + 1] - 1)
-      eppd$anc.used[row.lower:row.upper] <- F
-      # Sum administrative units to provincial level
-      site.prev <- eppd$anc.prev[row.lower:row.upper,]
-      site.n <- eppd$anc.n[row.lower:row.upper,]
-      site.pos <- site.prev * site.n
-      sub.pos <- colSums(site.pos, na.rm = T)
-      sub.n <- colSums(site.n, na.rm = T)
-      sub.prev <- sub.pos / sub.n
-      # Append to provincial site
-      for(c in colnames(eppd$anc.prev)) {
-        if(is.na(eppd$anc.prev[prov.site, c])) {
-          eppd$anc.prev[prov.site, c] <- sub.prev[c]
-          eppd$anc.n[prov.site, c] <- sub.n[c]
+    # if(grepl("ZAF", loc) | grepl("SWZ", loc)) {
+    #   first.year <- min(as.integer(colnames(eppd$anc.prev)[sapply(colnames(eppd$anc.prev), function(col) {
+    #     !all(is.na(eppd$anc.prev[, col]))
+    #   })]))
+    #   prov.sites <- which(!is.na(eppd$anc.prev[, as.character(first.year)]))
+    #   for(kk in 1:length(prov.sites)) {
+    #     prov.site <- prov.sites[kk]
+    #     row.lower <- prov.sites[kk] + 1
+    #     row.upper <- ifelse(i == length(prov.sites), nrow(eppd$anc.prev), prov.sites[kk + 1] - 1)
+    #     eppd$anc.used[row.lower:row.upper] <- F
+    #     # Sum administrative units to provincial level
+    #     site.prev <- eppd$anc.prev[row.lower:row.upper,]
+    #     site.n <- eppd$anc.n[row.lower:row.upper,]
+    #     site.pos <- site.prev * site.n
+    #     sub.pos <- colSums(site.pos, na.rm = T)
+    #     sub.n <- colSums(site.n, na.rm = T)
+    #     sub.prev <- sub.pos / sub.n
+    #     # Append to provincial site
+    #     for(c in colnames(eppd$anc.prev)) {
+    #       if(is.na(eppd$anc.prev[prov.site, c])) {
+    #         eppd$anc.prev[prov.site, c] <- sub.prev[c]
+    #         eppd$anc.n[prov.site, c] <- sub.n[c]
+    #       }
+    #     }
+    #   }
+    #   
+    #   
+    #   #Use an average site prediction value
+    #   yearly.means <- anc.dt[,.(nm=mean(site_pred,na.rm=TRUE)),by=year]  
+    #   site.means <- anc.dt[,.(nm.all=mean(mean,na.rm=TRUE)),by=year] 
+    #   all.means <- merge(yearly.means,site.means,by="year_id")
+    #   anc.dt <- merge(anc.dt[clinic %in% rownames(eppd$anc.prev)[eppd$anc.used],],all.means,by="year_id")
+    #   anc.dt <- anc.dt[,site_pred := nm]
+    #   anc.dt <- anc.dt[,mean := nm.all]
+    #   anc.dt[,nm:=NULL]; anc.dt[,nm.all := NULL]
+    #   
+    #   attr(dt, "eppd") <- eppd
+    #   attr(dt, "likdat") <- fnCreateLikDat(eppd, anchor.year = floor(attr(dt, "eppfp")$proj.steps[1]))
+    #   
+    # }
+    
+    
+    #Use Adm 1 mean where available
+    # anc.dt[,adm0_mean := ifelse(!is.na(adm1_mean),adm1_mean,adm0_mean)]
+    # anc.dt[,adm0_lower := ifelse(!is.na(adm1_lower),adm1_lower,adm0_lower)]
+    # anc.dt[,adm0_upper := ifelse(!is.na(adm1_upper),adm1_upper,adm0_upper)]
+    # 
+    if(uncertainty){
+      #Choose 1 from 1000 draws of uncertainty using adm0_mean bounds
+      for(row in 1:nrow(anc.dt.all)){
+        if(!is.na(anc.dt.all[row,adm0_mean])){
+          set.seed(i)
+          lower <- anc.dt.all[row,adm0_lower]
+          upper <- anc.dt.all[row,adm0_upper]
+          replace <- sample(runif(1000,lower,upper),1)
+          anc.dt.all[row,adm0_mean := replace]
+          
+        } else {
+          next
         }
       }
     }
-  } else {
-    # Add imputed data
-    # Read ANC data from back cast
-    anc.dir <- "/ihme/hiv/anc_backcast/"
-    recent <- max(as.integer(list.files(anc.dir)))
-    anc.path <- paste0(anc.dir, recent, "/data/", loc, ".csv")
-      if (length(list.files(anc.path))==0){
-        recent <- sort(as.integer(list.files(anc.dir)), decreasing=TRUE)[2]
-        anc.path <- paste0(anc.dir, recent, "/data/", loc, ".csv")
-   
-      }
     
-    if(!file.exists(anc.path)){
-      print("Note: No backcast data")
-    }
-  
-    if(file.exists(anc.path)){
 
-      anc.dt <- fread(anc.path)
-      anc.dt[, clinic := gsub("[^[:alnum:] ]", "",clinic)] # For differences in naming like added special characters
-      anc.dt <- anc.dt[order(clinic)]
-    # Add draw level data from ANC backcast
-        for(cl in unique(anc.dt$clinic)) {
-          clinic.idx <- which(grepl(gsub(" ", "", cl),gsub(" ", "",  rownames(eppd$anc.prev))))
-          sub.dt <- anc.dt[clinic == cl]
-          sub.dt[pred == "Data", (paste0("draw_", i)) := mean]
+    ##Generate the local:national offest term as the probit difference between national and predicted site prevalence - by subpopulation to avoid duplicates
+    all.anc <- list()
+    
+    for(subpop2 in unique(anc.dt.all$subpop)){
+      
+      if(subpop2 %in% unique(eppd$ancsitedat$subpop)){
+      anc.dt <- anc.dt.all[subpop == subpop2] 
+      site.dat <- eppd$ancsitedat[eppd$ancsitedat$subpop==subpop2,] %>% data.table()
+      } else {
+       anc.dt <- anc.dt.all
+       site.dat <- eppd$ancsitedat %>% data.table() 
+      }
+     
+      anc.dt  <- anc.dt[,offset := qnorm(adm0_mean)-qnorm(site_pred)]
+      #Copy year 2000 or otherwise earliest year to fill in  early years where GBD has data but LBD does not  
+      post.2000 <- anc.dt[year >=2000]
+      min.dt <- post.2000[year == min(year),.(offset), by = 'site']
+      
+      if(subpop2 %in% unique(eppd$ancsitedat$subpop)){
+      temp.dat <- merge(site.dat,anc.dt[,.(site,subpop,year,site_pred,adm0_mean,adm0_lower,adm0_upper,offset)], by=c("site","subpop","year"),all.x=TRUE)
+      } else {
+      temp.dat <- merge(site.dat,anc.dt[,.(site,subpop,year,site_pred,adm0_mean,adm0_lower,adm0_upper,offset)], by=c("site","year"),all.x=TRUE)
+        
+      }
+      #Duplicate issue with 'pseudo sites' in Mozambique
+      if(loc == "MOZ"){
+        min.dt <- unique(min.dt)
+      }
+      
+      merge.dt <- copy(temp.dat[year < 2000 & !is.na(prev)])[,offset := NULL]
+      merge.dt <- merge(merge.dt, min.dt, by = 'site')
+      
+      temp.dat <- temp.dat[year >= 2000 & !is.na(prev)]
+      temp.dat <- rbind(temp.dat, merge.dt, use.names = T)
+      
+      all.anc <- rbind(all.anc,temp.dat)
+    
+    }
+      
+     nrow(all.anc) == nrow(eppd$ancsitedat)
+     all.anc[is.na(offset), offset := 0]
+     all.anc[,c('site_pred','adm0_mean','adm0_lower') := NULL]
+     all.anc <- as.data.frame(all.anc)
+     
+     eppd$ancsitedat <- all.anc
+     
+     attr(dt, "eppd") <- eppd
+
+  } else if(backcast){
+      
+      if(grepl("ZAF", loc) | grepl("SWZ", loc)) {
+        # Collapse up to single provincial ANC site
+        # Extract first year of data and use that site as provincial site
+        first.year <- min(as.integer(colnames(eppd$anc.prev)[sapply(colnames(eppd$anc.prev), function(col) {
+          !all(is.na(eppd$anc.prev[, col]))
+        })]))
+        prov.sites <- which(!is.na(eppd$anc.prev[, as.character(first.year)]))
+        for(i in 1:length(prov.sites)) {
+          prov.site <- prov.sites[i]
+          row.lower <- prov.sites[i] + 1
+          row.upper <- ifelse(i == length(prov.sites), nrow(eppd$anc.prev), prov.sites[i + 1] - 1)
+          eppd$anc.used[row.lower:row.upper] <- F
+          # Sum administrative units to provincial level
+          site.prev <- eppd$anc.prev[row.lower:row.upper,]
+          site.n <- eppd$anc.n[row.lower:row.upper,]
+          site.pos <- site.prev * site.n
+          sub.pos <- colSums(site.pos, na.rm = T)
+          sub.n <- colSums(site.n, na.rm = T)
+          sub.prev <- sub.pos / sub.n
+          # Append to provincial site
+          for(c in colnames(eppd$anc.prev)) {
+            if(is.na(eppd$anc.prev[prov.site, c])) {
+              eppd$anc.prev[prov.site, c] <- sub.prev[c]
+              eppd$anc.n[prov.site, c] <- sub.n[c]
+            }
+          }
+        }
+      } else {
+        # Add imputed data
+        # Read ANC data from back cast
+        anc.dir <- "/ihme/hiv/anc_backcast/"
+        recent <- max(as.integer(list.files(anc.dir)))
+        anc.path <- paste0(anc.dir, recent, "/data/", loc, ".csv")
+        if (length(list.files(anc.path))==0){
+          recent <- sort(as.integer(list.files(anc.dir)), decreasing=TRUE)[2]
+          anc.path <- paste0(anc.dir, recent, "/data/", loc, ".csv")
+          
+        }
+        
+        if(!file.exists(anc.path)){
+          print("Note: No backcast data")
+        }
+        
+        if(file.exists(anc.path)){
+          
+          anc.dt <- fread(anc.path)
+          anc.dt[, clinic := gsub("[^[:alnum:] ]", "",clinic)] # For differences in naming like added special characters
+          anc.dt <- anc.dt[order(clinic)]
+          # Add draw level data from ANC backcast
+          for(cl in unique(anc.dt$clinic)) {
+            clinic.idx <- which(grepl(gsub(" ", "", cl),gsub(" ", "",  rownames(eppd$anc.prev))))
+            sub.dt <- anc.dt[clinic == cl]
+            sub.dt[pred == "Data", (paste0("draw_", i)) := mean]
             for(y in unique(anc.dt[pred == "Data"]$year_id)) {
               eppd$anc.prev[clinic.idx, as.character(y)] <- sub.dt[year_id == y, get(paste0("draw_", i))]
               eppd$anc.n[clinic.idx, as.character(y)] <- sub.dt[year_id == y, n]
             }
+          }
+          
+          
+          # Reformat EPP object with updated data
+          if(!length(dt)){
+            attr(dt, "eppd") <- eppd
+          } else{
+            attr(dt[[gen.pop]], "eppd") <- eppd
+          }
         }
-   
-
-  # Reformat EPP object with updated data
-    if(!length(dt)){
-    attr(dt, "eppd") <- eppd
+      }
+      
+      #str(attr(dt,"eppd")$ancrtsite.prev)
+      
+      set.list.attr <- function(obj, attrib, value.lst)
+        mapply(function(set, value){ attributes(set)[[attrib]] <- value; set}, 
+               obj, value.lst)
+      
+      if(!is.null(nrow(eppd$ancrtsite.prev)) ){
+        if(nrow(eppd$ancrtsite.prev)<length(eppd$anc.used)){
+          enter.mat <- matrix(,length(eppd$anc.used)-nrow(eppd$ancrtsite.prev),38,)
+          eppd$ancrtsite.prev = rbind(eppd$ancrtsite.prev,  enter.mat)
+          eppd$ancrtsite.n = rbind(eppd$ancrtsite.n,  enter.mat)
+        }
+      }
+      
+      ###NOTE THIS WILL NOT WORK BECAUSE MELT_ANCSITE_DATA IS MOVED - NEED TO UPDATE 
+      if(!length(dt)){
+        eppd <- list()
+        eppd[[1]] <- attr(dt, 'eppd')
+        eppd <- Map("[[<-", eppd, "ancsitedat", lapply(eppd, melt_ancsite_data))
+        attr(dt, 'eppd') <- eppd[[1]]
       } else{
-    attr(dt[[gen.pop]], "eppd") <- eppd
+        attr(dt[[gen.pop]], "likdat") <- epp::fnCreateLikDat(eppd, anchor.year = floor(attr(dt[[gen.pop]], "specfp")$proj.steps[1]))
+      }
+      
+    }
+    
+    return(dt)
+  }
+  
+  
+  sub.art <- function(dt, loc, use.recent.unaids = FALSE) {
+    if(grepl("KEN", loc) & loc.table[ihme_loc_id == loc, level] == 5) {
+      temp.loc <- loc.table[location_id == loc.table[ihme_loc_id == loc, parent_id], ihme_loc_id]
+    } else {
+      temp.loc <- loc
+    }
+    
+    ## TODO
+    #Will need to update once we have 2018
+    for(c.year in c('UNAIDS_2017', 'UNAIDS_2016', 'UNAIDS_2015', '140520')){
+      art.path <-paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/extrapolate_ART/PV_testing/", c.year, "/", temp.loc, "_Adult_ART_cov.csv") 
+      if(file.exists(art.path)){
+        art.dt <- fread(art.path)
+        break;
       }
     }
-  }
-
-  #str(attr(dt,"eppd")$ancrtsite.prev)
-
-  set.list.attr <- function(obj, attrib, value.lst)
-  mapply(function(set, value){ attributes(set)[[attrib]] <- value; set}, 
-         obj, value.lst)
-  
-  if(!is.null(nrow(eppd$ancrtsite.prev)) ){
-    if(nrow(eppd$ancrtsite.prev)<length(eppd$anc.used)){
-  enter.mat <- matrix(,length(eppd$anc.used)-nrow(eppd$ancrtsite.prev),38,)
-  eppd$ancrtsite.prev = rbind(eppd$ancrtsite.prev,  enter.mat)
-  eppd$ancrtsite.n = rbind(eppd$ancrtsite.n,  enter.mat)
-  }
-}
-  
-  if(!length(dt)){
-    eppd <- list()
-    eppd[[1]] <- attr(dt, 'eppd')
-    eppd <- Map("[[<-", eppd, "ancsitedat", lapply(eppd, melt_ancsite_data))
-    attr(dt, 'eppd') <- eppd[[1]]
-  } else{
-    attr(dt[[gen.pop]], "likdat") <- epp::fnCreateLikDat(eppd, anchor.year = floor(attr(dt[[gen.pop]], "specfp")$proj.steps[1]))
-  }
-  
-  
-
-  return(dt)
-}
-
-
-sub.art <- function(dt, loc, use.recent.unaids = FALSE) {
-  if(grepl("KEN", loc) & loc.table[ihme_loc_id == loc, level] == 5) {
-    temp.loc <- loc.table[location_id == loc.table[ihme_loc_id == loc, parent_id], ihme_loc_id]
-  } else {
-    temp.loc <- loc
-  }
-  
-  ## TODO
-  #Will need to update once we have 2018
-  for(c.year in c('UNAIDS_2017', 'UNAIDS_2016', 'UNAIDS_2015', '140520')){
-    art.path <-paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/extrapolate_ART/PV_testing/", c.year, "/", temp.loc, "_Adult_ART_cov.csv") 
-    if(file.exists(art.path)){
-      art.dt <- fread(art.path)
-      break;
+    art.dt[is.na(art.dt)] <- 0
+    
+    ##Need this to be logical later
+    art.dt[, type := ifelse(ART_cov_pct > 0, TRUE, FALSE)]	
+    
+    #years <- epp.input$epp.art$year
+    years <- as.integer(attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$year)
+    
+    if(max(years) > max(art.dt$year)) {
+      max.dt <- copy(art.dt[year == max(year)])
+      missing.years <- setdiff(years, art.dt$year)
+      add.dt <- rbindlist(lapply(missing.years, function(cyear) {
+        copy.dt <- copy(max.dt)
+        copy.dt[, year := cyear]
+      }))
+      art.dt <- rbind(art.dt, add.dt)
     }
+    attr(dt,"specfp")$art15plus_isperc[attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$sex=="Male"] <- art.dt[year %in% years & sex == 1, type]
+    attr(dt,"specfp")$art15plus_isperc[attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$sex=="Female"] <- art.dt[year %in% years & sex == 2, type]
+    
+    art.dt[, ART_cov_val := ifelse(ART_cov_pct > 0, ART_cov_pct, ART_cov_num)]
+    attr(dt,"specfp")$art15plus_num[attr(attr(dt,"specfp")$art15plus_num,"dimnames")$sex=="Male"] <- art.dt[year %in% years & sex == 1, ART_cov_val]
+    attr(dt,"specfp")$art15plus_num[attr(attr(dt,"specfp")$art15plus_num,"dimnames")$sex=="Female"] <- art.dt[year %in% years & sex == 2, ART_cov_val]
+    
+    return(dt)
   }
-  art.dt[is.na(art.dt)] <- 0
   
-  ##Need this to be logical later
-  art.dt[, type := ifelse(ART_cov_pct > 0, TRUE, FALSE)]	
-  
-  #years <- epp.input$epp.art$year
-  years <- as.integer(attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$year)
-  
-  if(max(years) > max(art.dt$year)) {
-    max.dt <- copy(art.dt[year == max(year)])
-    missing.years <- setdiff(years, art.dt$year)
-    add.dt <- rbindlist(lapply(missing.years, function(cyear) {
-      copy.dt <- copy(max.dt)
-      copy.dt[, year := cyear]
-    }))
-    art.dt <- rbind(art.dt, add.dt)
+  sub.sexincrr <- function(dt, loc, i){
+    if(!grepl('IND', loc)){
+      rr.dt <- fread(paste0('/share/hiv/spectrum_input/FtoM_inc_ratio/', substr(loc, 1, 3), '.csv'))
+    }else{
+      rr.dt <- fread(paste0('/share/hiv/spectrum_input/FtoM_inc_ratio/', loc, '.csv'))
+    }
+    rr <- rr.dt[draw == i, FtoM_inc_ratio]
+    final.rr <- rr[length(rr)]
+    rr <- c(rr, rep(final.rr, length(start.year:stop.year) - length(rr)))
+    names(rr) <- start.year:stop.year
+    attr(dt, 'specfp')$incrr_sex <- rr
+    return(dt)
   }
-  attr(dt,"specfp")$art15plus_isperc[attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$sex=="Male"] <- art.dt[year %in% years & sex == 1, type]
-  attr(dt,"specfp")$art15plus_isperc[attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$sex=="Female"] <- art.dt[year %in% years & sex == 2, type]
-  
-  art.dt[, ART_cov_val := ifelse(ART_cov_pct > 0, ART_cov_pct, ART_cov_num)]
-  attr(dt,"specfp")$art15plus_num[attr(attr(dt,"specfp")$art15plus_num,"dimnames")$sex=="Male"] <- art.dt[year %in% years & sex == 1, ART_cov_val]
-  attr(dt,"specfp")$art15plus_num[attr(attr(dt,"specfp")$art15plus_num,"dimnames")$sex=="Female"] <- art.dt[year %in% years & sex == 2, ART_cov_val]
-  
-  return(dt)
-}
-
-sub.sexincrr <- function(dt, loc, i){
-  if(!grepl('IND', loc)){
-    rr.dt <- fread(paste0('/share/hiv/spectrum_input/FtoM_inc_ratio/', substr(loc, 1, 3), '.csv'))
-  }else{
-    rr.dt <- fread(paste0('/share/hiv/spectrum_input/FtoM_inc_ratio/', loc, '.csv'))
-  }
-  rr <- rr.dt[draw == i, FtoM_inc_ratio]
-  final.rr <- rr[length(rr)]
-  rr <- c(rr, rep(final.rr, length(start.year:stop.year) - length(rr)))
-  names(rr) <- start.year:stop.year
-  attr(dt, 'specfp')$incrr_sex <- rr
-  return(dt)
-}

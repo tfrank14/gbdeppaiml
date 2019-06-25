@@ -2,11 +2,11 @@
 ## Output object is read to run through fitmod()
 read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.params.sub = TRUE, 
                              pop.sub = TRUE, anc.sub = TRUE, anc.backcast = TRUE, prev.sub = TRUE, art.sub = TRUE, sexincrr.sub = TRUE, 
-                             popadjust = TRUE, age.prev = FALSE, paediatric = FALSE, anc.rt = FALSE
+                             popadjust = TRUE, age.prev = FALSE, paediatric = FALSE, anc.rt = FALSE, geoadjust=FALSE
                              ){
-  dt <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped/', loc, '.rds'))
-  
-  ## Substitute IHME data
+  dt <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped_subpop/', loc, '.rds'))
+
+ ## Substitute IHME data
   ## Population parameters
   if(pop.sub){
     ## TODO fix this workflow
@@ -63,9 +63,8 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
         anc.backcast <- F
       }
       
-      if(anc.backcast) {
-        print("Substituting ANC backcast output")
-        dt <- sub.anc(loc, dt, i)
+      if(anc.backcast | geoadjust) {
+        dt <- sub.anc(loc, dt, i, uncertainty=TRUE)
       }
       
     } 

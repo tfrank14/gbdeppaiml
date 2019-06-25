@@ -20,9 +20,9 @@ if(length(args) > 0) {
     compare.run <- NA
   }
 } else {
-  loc <- "LSO"
-  run.name <- '190613_quetzal'
-  compare.run <- NA
+  loc <- "MWI"
+  run.name <- '190621_georatios_test'
+  compare.run <- "190620_quetzal2"
   paediatric <- TRUE
 }
 

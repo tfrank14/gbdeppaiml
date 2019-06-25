@@ -94,50 +94,71 @@ collapse_epp <- function(loc){
     pjnz <- file
     eppd <- epp::read_epp_data(pjnz)
   })
+  
   cc <- attr(eppd.list[[1]], 'country_code')
-  eppd.list <- unlist(eppd.list,recursive = FALSE )
-  eppd.tot <- eppd.list[1]
+
   subpop.tot <- loc
+ 
+  eppd.tot <- eppd.list[[1]]
+  names(eppd.tot) <- names(eppd.list[[1]])
+  
+  for(kk in 1:length(names(eppd.tot))){
+    attr(eppd.tot[[kk]],"subpop") <- names(eppd.tot)[[kk]]
+  }
+  
+  
+  ancsitedat <- melt_ancsite_data(eppd.tot)
+  hhsdat <-  tidy_hhs_data(eppd.tot)
+  
+  eppd.list <- unlist(eppd.list,recursive = FALSE)
+  eppd.tot <- eppd.list[1]
   names(eppd.tot) <- subpop.tot
+  eppd.tot[[subpop.tot]]$ancsitedat <- ancsitedat
+  eppd.tot[[subpop.tot]]$hhs <- hhsdat
+
   
+  ##########REMOVE START HERE################
   # region
-  eppd.tot[[subpop.tot]]$region <- subpop.tot 
-  
-  #country 
+  eppd.tot[[subpop.tot]]$region <- subpop.tot
+  eppd.tot[[subpop.tot]]$region <- subpop.tot
+
+  #country
   attr(eppd.tot,"country") <- eppd.tot[[1]]$country
   attr(eppd.tot,"country_code") <- cc
-  
-  # anc.used (append)
+
+  #anc.used (append)
   eppd.tot[[subpop.tot]]$anc.used <- unlist(lapply(eppd.list, function(eppd) {
     anc.used <- eppd$anc.used
     names(anc.used) <- rownames(eppd$anc.prev)
     return(anc.used)
   }))
-  
+
+
+
   # anc.prev (append)
   eppd.tot[[subpop.tot]]$anc.prev <- do.call(rbind, lapply(eppd.list, function(eppd) {
     subpop <- names(eppd)
     anc.prev <- eppd$anc.prev
   }))
-  
+
   # anc.n (append)
   eppd.tot[[subpop.tot]]$anc.n <- do.call(rbind, lapply(eppd.list, function(eppd) {
     subpop <- names(eppd)
     anc.n <- eppd$anc.n
   }))
-  
+
   # ancrtsite.prev (collapse)
   eppd.tot[[subpop.tot]]$ancrtsite.prev <- do.call(rbind, lapply(eppd.list, function(eppd) {
     subpop <- names(eppd)
     ancrtsite.prev <- eppd$ancrtsite.prev
   }))
-  
+
   # ancrtsite.prev (append)
   eppd.tot[[subpop.tot]]$ancrtsite.n <- do.call(rbind, lapply(eppd.list, function(eppd) {
     subpop <- names(eppd)
     ancrtsite.n <- eppd$ancrtsite.n
   }))
-  
+
   # TODO: Pull all of this out, vet, sub in
   # For now, just collapsing
   artcens.temp <- data.table(do.call(rbind, lapply(eppd.list, function(eppd) {
@@ -152,24 +173,27 @@ collapse_epp <- function(loc){
   } else {
   eppd.tot[[subpop.tot]]$ancrtcens <- data.frame(year=integer(), prev=integer(), n=integer())
   }
-  
+
   # hhs (append) ** be careful "not used TRUE"
-  hhs.temp <- data.table(do.call(rbind, lapply(eppd.list, function(eppd) {
-    subpop <- names(eppd)
-    hhs <- eppd$hhs
-  })))
-  # hhs.temp <- hhs.temp[used == TRUE]
-  # TODO: what to do with hhs? we're subbing in our own prev surveys, so probably doesn't matter
-  if(any(!is.na(hhs.temp$n))){
-    hhs.temp[, pos := n * prev]
-    hhs.sum <- hhs.temp[, lapply(.SD, sum), by = .(year)]
-    hhs.sum[, prev := pos / n]
-    hhs.sum[, se := ((prev * (1 - prev)) / n)**0.5]
-    hhs.sum[, used := NULL]
-    hhs.sum[, pos := NULL]
-    hhs.sum[, used := TRUE]
-  }
-  eppd.tot[[subpop.tot]]$hhs <- as.data.frame(hhs.temp)
+  # hhs.temp <- data.table(do.call(rbind, lapply(eppd.list, function(eppd) {
+  #   subpop <- names(eppd)
+  #   hhs <- eppd$hhs
+  # })))
+  #hhs.temp <- hhs.temp[used == TRUE]
+  # 
+  # ##########remove end###############
+  # # TODO: what to do with hhs? we're subbing in our own prev surveys, so probably doesn't matter
+  # if(any(!is.na(hhs.temp$n))){
+  #   hhs.temp[, pos := n * prev]
+  #   hhs.sum <- hhs.temp[, lapply(.SD, sum), by = .(year)]
+  #   hhs.sum[, prev := pos / n]
+  #   hhs.sum[, se := ((prev * (1 - prev)) / n)**0.5]
+  #   hhs.sum[, used := NULL]
+  #   hhs.sum[, pos := NULL]
+  #   hhs.sum[, used := TRUE]
+  # }
+
+  #eppd.tot[[subpop.tot]]$hhs <- as.data.frame(hhs.temp)
   # eppd.tot[[subpop.tot]]$hhs <- as.data.frame(hhs.temp)
   
   ## epp.subp

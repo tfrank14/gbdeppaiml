@@ -5,7 +5,7 @@ root <- ifelse(windows,"J:/","/home/j/")
 user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
 code.dir <- paste0(ifelse(windows, "H:", paste0("/ihme/homes/", user)), "/gbdeppaiml/")
 ## Packages
-library(data.table); library(mvtnorm); library(survey); library(ggplot2); library(plyr)
+library(data.table); library(mvtnorm); library(survey); library(ggplot2); library(plyr); library(dplyr)
 
 ## Arguments
 args <- commandArgs(trailingOnly = TRUE)
@@ -17,8 +17,8 @@ if(length(args) > 0) {
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
   paediatric <- as.logical(args[4])
 } else {
-	run.name <- "190613_quetzal"
-	loc <- "GNB"
+	run.name <- "190621_georatios_test"
+	loc <- "BFA"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- TRUE
@@ -26,6 +26,7 @@ if(length(args) > 0) {
 
 run.table <- fread('/share/hiv/epp_input/gbd19/eppasm_run_table.csv')
 c.args <- run.table[run_name==run.name]
+
 ### Arguments
 ## Some arguments are likely to stay constant across runs, others we're more likely to test different options.
 ## The arguments that are more likely to vary are pulled from the eppasm run table
@@ -42,6 +43,8 @@ age.prev <- c.args[['age_prev']]
 popadjust <- c.args[['popadjust']]
 anc.rt <- c.args[['anc_rt']]
 epp.mod <- c.args[['epp_mod']]
+geoadjust <- TRUE
+
 ### Paths
 out.dir <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, "/", loc)
 
@@ -58,7 +61,7 @@ loc.table <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/location_ta
 ### Code
 ## Read in spectrum object, sub in GBD parameters
 dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, 
-                       pop.sub, anc.sub, anc.backcast, prev.sub, art.sub, sexincrr.sub, popadjust, age.prev, paediatric, anc.rt)
+                       pop.sub, anc.sub, anc.backcast, prev.sub, art.sub, sexincrr.sub, popadjust, age.prev, paediatric, anc.rt, geoadjust)
 
 
 
@@ -76,8 +79,9 @@ attr(dt, 'eppd')$ancsitedat = unique(attr(dt, 'eppd')$ancsitedat)
 ## TODO - fix se = 0 data points in ZAF
 attr(dt, 'eppd')$hhs <- attr(dt, 'eppd')$hhs[!attr(dt, 'eppd')$hhs$se == 0,]
 attr(dt, 'specfp')$relinfectART <- 0.3
+
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0=1e5, B = 1e3, number_k = 500)
+fit <- fitmod(dt, eppmod = epp.mod, B0=1e3, B = 1e3, number_k = 500)
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)

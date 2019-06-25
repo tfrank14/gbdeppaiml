@@ -29,11 +29,10 @@ prepare_spec_object <- function(loc, popadjust = TRUE, popupdate=TRUE, use_ep5=F
   country <- attr(eppd, "country")
   cc <- attr(eppd, "country_code")
   
-  ## melt site-level data
-  eppd <- Map("[[<-", eppd, "ancsitedat", lapply(eppd, melt_ancsite_data))
-  
-  ## tidy HHS data
-  eppd <- Map("[[<-", eppd, "hhs", lapply(eppd, tidy_hhs_data))
+  ## melt site-level data - move to within collapse_epp
+  # eppd <- Map("[[<-", eppd, "ancsitedat", lapply(eppd, melt_ancsite_data))
+  # ## tidy HHS data
+  # eppd <- Map("[[<-", eppd, "hhs", lapply(eppd, tidy_hhs_data))
   
   attr(eppd, "country") <- country
   attr(eppd, "country_code") <- cc
@@ -91,7 +90,7 @@ prepare_spec_object_ind <- function(loc, start.year = 1970, stop.year = 2019, po
   attr(val, 'specfp') <- specfp
   attr(val, 'country') <- eppd$country
   attr(val, 'region') <- loc
-  #saveRDS(val, paste0('/share/hiv/data/PJNZ_EPPASM_prepped/', loc, '.rds'))
+  saveRDS(val, paste0('/share/hiv/data/PJNZ_EPPASM_prepped_subpop/', loc, '.rds'))
   
   return(val)
   

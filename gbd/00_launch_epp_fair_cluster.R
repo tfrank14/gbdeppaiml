@@ -10,8 +10,8 @@ date <- substr(gsub("-","",Sys.Date()),3,8)
 library(data.table)
 
 ## Arguments
-run.name <- "190613_quetzal"
-compare.run <- NA
+run.name <- "190621_georatios_test"
+compare.run <- "190620_quetzal2"
 proj.end <- 2019
 n.draws <- 1
 run.group2 <- FALSE
@@ -69,55 +69,57 @@ if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
 }
 
 ## Launch EPP
+loc.list <- loc.list[!grepl('ZAF', loc.list)]
+
 for(loc in loc.list) {
     ## Run EPPASM
-    # epp.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=12:00:00 -l archive -q all.q -P ", cluster.project, " ",
-    #                      "-e /share/temp/sgeoutput/", user, "/errors ",
-    #                      "-o /share/temp/sgeoutput/", user, "/output ",
-    #                      "-N ", loc, "_eppasm ",
-    #                      "-t 1:", n.draws, " ",
-    #                      "-hold_jid eppasm_prep_inputs_", run.name," ",
-    #                      code.dir, "gbd/singR_shell.sh ",
-    #                      code.dir, "gbd/main.R ",
-    #                      run.name, " ", loc, " ", proj.end, " ", paediatric)
-    # print(epp.string)
-    # system(epp.string)
+    epp.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=12:00:00 -l archive -q all.q -P ", cluster.project, " ",
+                         "-e /share/temp/sgeoutput/", user, "/errors ",
+                         "-o /share/temp/sgeoutput/", user, "/output ",
+                         "-N ", loc, "_eppasm ",
+                         "-t 1:", n.draws, " ",
+                         "-hold_jid eppasm_prep_inputs_", run.name," ",
+                         code.dir, "gbd/singR_shell.sh ",
+                         code.dir, "gbd/main.R ",
+                         run.name, " ", loc, " ", proj.end, " ", paediatric)
+    print(epp.string)
+    system(epp.string)
 
     # # ## Draw compilation
-    #  draw.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:10:00 -q all.q -P ", cluster.project, " ",
-    #                       "-e /share/temp/sgeoutput/", user, "/errors ",
-    #                        "-o /share/temp/sgeoutput/", user, "/output ",
-    #                        "-N ", loc, "_save_draws ",
-    #                        "-hold_jid ", loc, "_eppasm ",
-    #                       code.dir, "gbd/singR_shell.sh ",
-    #                        code.dir, "gbd/compile_draws.R ",
-    #                        run.name, " ", loc, ' ', n.draws, ' TRUE ', paediatric)
-    #  print(draw.string)
-    #  system(draw.string)
-    # 
-    # ## Create aggregate and age-specific plots
-     # plot.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:15:00 -q all.q -P ", cluster.project, " ",
-     #                       "-e /share/temp/sgeoutput/", user, "/errors ",
-     #                       "-o /share/temp/sgeoutput/", user, "/output ",
-     #                       "-N ", loc, "_plot_eppasm ",
-     #                       "-hold_jid ", loc, "_save_draws ",
-     #                       code.dir, "gbd/singR_shell.sh ",
-     #                       code.dir, "gbd/main_plot_output.R ",
-     #                       loc, " ", run.name, ' ', paediatric, ' ', compare.run)
-     # print(plot.string)
-     # system(plot.string)
-     
-     ## Prep for reckoning
-     prep.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:20:00 -l archive -q all.q -P ", cluster.project, " ",
+     draw.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:10:00 -q all.q -P ", cluster.project, " ",
                           "-e /share/temp/sgeoutput/", user, "/errors ",
-                          "-o /share/temp/sgeoutput/", user, "/output ",
-                          "-N ", loc, "_apply_age_splits ",
-                          "-hold_jid ", loc,"_save_draws ",
+                           "-o /share/temp/sgeoutput/", user, "/output ",
+                           "-N ", loc, "_save_draws ",
+                           "-hold_jid ", loc, "_eppasm ",
                           code.dir, "gbd/singR_shell.sh ",
-                          code.dir, "gbd/apply_age_splits.R ",
-                          loc, " ", run.name, " ", run.name)
-     print(prep.string)
-     system(prep.string)
+                           code.dir, "gbd/compile_draws.R ",
+                           run.name, " ", loc, ' ', n.draws, ' TRUE ', paediatric)
+     print(draw.string)
+     system(draw.string)
+    
+  # ## Create aggregate and age-specific plots
+     plot.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:15:00 -q all.q -P ", cluster.project, " ",
+                           "-e /share/temp/sgeoutput/", user, "/errors ",
+                           "-o /share/temp/sgeoutput/", user, "/output ",
+                           "-N ", loc, "_plot_eppasm ",
+                           "-hold_jid ", loc, "_save_draws ",
+                           code.dir, "gbd/singR_shell.sh ",
+                           code.dir, "gbd/main_plot_output.R ",
+                           loc, " ", run.name, ' ', paediatric, ' ', compare.run)
+     print(plot.string)
+     system(plot.string)
+
+     ## Prep for reckoning
+     # prep.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:20:00 -l archive -q all.q -P ", cluster.project, " ",
+     #                      "-e /share/temp/sgeoutput/", user, "/errors ",
+     #                      "-o /share/temp/sgeoutput/", user, "/output ",
+     #                      "-N ", loc, "_apply_age_splits ",
+     #                      "-hold_jid ", loc,"_save_draws ",
+     #                      code.dir, "gbd/singR_shell.sh ",
+     #                      code.dir, "gbd/apply_age_splits.R ",
+     #                      loc, " ", run.name, " ", run.name)
+     # print(prep.string)
+     # system(prep.string)
 }
 
 ## Compile plots
