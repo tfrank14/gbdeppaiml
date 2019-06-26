@@ -13,7 +13,7 @@ if(length(args) > 0) {
 	proj.end <- args[2]
 	run.group2 <- args[3]
 } else {
-	run.name <- "190503_all"
+	run.name <- "190620_quetzal2"
 	proj.end <- 2019
 	run.group2 <- FALSE
 }

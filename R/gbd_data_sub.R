@@ -583,10 +583,10 @@ sub.prev.granular <- function(dt, loc){
   ## TODO: Add this to cache prev
   age.prev.dt <- fread(paste0("/ihme/hiv/epp_input/gbd19/", run.name, "/prev_surveys.csv"))
   age.prev.dt <- age.prev.dt[iso3 == loc]
-  age.prev.dt <- age.prev.dt[age_year %in% 15:59 | age_year == '15-49']
-  
-  age.prev.dt[!age_year == '15-49', agegr := paste0(age_year, '-', as.numeric(age_year)+4)]
+  age.prev.dt <- age.prev.dt[age_year %in% 15:59 | age_year == '15-49' | age_year == '15-64']
+  age.prev.dt[!age_year %in% c('15-49', '15-64'), agegr := paste0(age_year, '-', as.numeric(age_year)+4)]
   age.prev.dt[age_year == '15-49', agegr := '15-49']
+  age.prev.dt[age_year == '15-64', agegr := '15-64']
   age.prev.dt[sex_id == 1, sex := 'male']
   age.prev.dt[sex_id == 2, sex := 'female']
   age.prev.dt[sex_id == 3, sex := 'both']

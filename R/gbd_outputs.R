@@ -65,7 +65,6 @@ gbd_sim_mod <-  function(fit, rwproj=fit$fp$eppmod == "rspline", VERSION = 'C'){
     
     
   }
-  if(length(fp.draw$tsEpidemicStart) == 0){fp.draw$tsEpidemicStart = 1985}
   mod <- simmod(fp.draw, VERSION = VERSION)
   attr(mod, 'theta') <- fit$resample[rand.draw,]
   return(mod)
@@ -408,7 +407,7 @@ save_data <- function(loc, eppd, run.name){
       prevdata.agg[, age_group_id := 24]
       prevdata.agg[, age := '15-49']
       prevdata <- prevdata[!agegr == '15-49']
-      prevdata[,age:=sapply(strsplit(agegr, "-"), "[[", 1)]
+      prevdata[,age:=as.character(sapply(strsplit(agegr, "-"), "[[", 1))]
       prevdata <- merge(prevdata, age.map[,.(age = age_group_name_short, age_group_id)],  by = 'age')
       prevdata <- rbind(prevdata, prevdata.agg, use.names = T)
       prevdata[, agegr  := NULL]

@@ -124,7 +124,7 @@ plot_15to49 <- function(loc, run.name,  compare.run = NA, paediatric = FALSE, pl
     data.agg <- data.agg[,.(mean = weighted.mean(x = mean, w = pop)), by =c('year', 'model', 'indicator') ]
     data.agg[,upper := NA]
     data.agg[,lower := NA]    
-    ui.dt <- fread(paste0('/share/hiv/epp_input/gbd19/190613_quetzal/prev_surveys_15to49.csv'))
+    ui.dt <- fread(paste0('/share/hiv/data/prevalence_surveys/GBD2017_prevalence_surveys_15to49.csv'))
     ui.dt <- ui.dt[iso3 == loc]
     data.agg <- merge(data.agg, ui.dt[,.(year, se)], by = 'year', all.x = T)
     data.agg[, upper := mean + (1.96 * se)] 

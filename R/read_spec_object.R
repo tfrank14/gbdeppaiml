@@ -15,7 +15,7 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
       demp <- create_spectrum_demog_param(loc, start.year, stop.year)
       projp <- create_hivproj_param(loc, start.year, stop.year)
       attr(dt, 'specfp') <- create_spectrum_fixpar(projp, demp, proj_start = start.year, proj_end = stop.year, popadjust=popadjust)
-      attr(dt, 'specfp')$tsEpidemicStart <- 1985
+      attr(dt, 'specfp')$ss$time_epi_start <- 1985
     }
       specfp <- sub.pop.params.specfp(attr(dt, 'specfp'), loc, i)
       specfp <- update_spectrum_fixpar(specfp, proj_start = start.year, proj_end = stop.year,time_epi_start = specfp$ss$time_epi_start, popadjust=popadjust)
