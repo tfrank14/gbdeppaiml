@@ -69,11 +69,9 @@ if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
 }
 
 ## Launch EPP
-loc.list <- loc.list[!grepl('ZAF', loc.list)]
-
 for(loc in loc.list) {
     ## Run EPPASM
-    epp.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=12:00:00 -l archive -q all.q -P ", cluster.project, " ",
+    epp.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=12:00:00 -l archive -q long.q -P ", cluster.project, " ",
                          "-e /share/temp/sgeoutput/", user, "/errors ",
                          "-o /share/temp/sgeoutput/", user, "/output ",
                          "-N ", loc, "_eppasm ",
@@ -96,7 +94,7 @@ for(loc in loc.list) {
                            run.name, " ", loc, ' ', n.draws, ' TRUE ', paediatric)
      print(draw.string)
      system(draw.string)
-    
+
   # ## Create aggregate and age-specific plots
      plot.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:15:00 -q all.q -P ", cluster.project, " ",
                            "-e /share/temp/sgeoutput/", user, "/errors ",

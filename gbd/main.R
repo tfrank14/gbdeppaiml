@@ -58,6 +58,17 @@ devtools::load_all()
 ### Tables
 loc.table <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/location_table.csv'))
 
+# These locations do not have information from LBD team estimates
+no_geo_adj <-  c(loc.table[epp ==1 & grepl("IND",ihme_loc_id),ihme_loc_id],"PNG","HTI","DOM", "CPV","GNQ",loc.table[epp ==1 & grepl("ZAF",ihme_loc_id),ihme_loc_id])
+
+# ANC data
+if(geoadjust & !loc %in% no_geo_adj){
+  geoadjust  <<- TRUE
+} else {
+  geoadjust  <<- FALSE
+}
+
+
 ### Code
 ## Read in spectrum object, sub in GBD parameters
 dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, 

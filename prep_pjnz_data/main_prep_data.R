@@ -14,7 +14,7 @@ print(args)
 if(length(args) > 0) {
   loc <- args[1]
 } else {
-  loc <- "BFA"
+  loc <- "NGA_25337"
 }
 ### Functions
 library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
@@ -22,7 +22,7 @@ setwd(paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/eppasm/"))
 devtools::load_all()
 setwd(code.dir)
 devtools::load_all()
-
+debug(epp::read_epp_input)
 ### Tables
 loc.table <- data.table(get_locations(hiv_metadata = T))
 

@@ -45,8 +45,12 @@ find_pjnz <- function(loc){
   if(loc.name=="Plateau"){
     file.list <-  pjnz.list[which(grepl(paste0("Nigeria_", loc.name), pjnz.list))]
   }
-  if(loc.name=="Niger" | loc.name=="Guinea"| 
-     loc.name=="Congo" | loc.name=="Sudan"){
+  # if(loc.name=="Niger" | loc.name=="Guinea"| 
+  #    loc.name=="Congo" | loc.name=="Sudan"){
+  #   file.list <-  pjnz.list[which(grepl(paste0("/", loc.name,"_"), pjnz.list))]
+  # }
+  
+  if(loc.name=="Niger" ){
     file.list <-  pjnz.list[which(grepl(paste0("/", loc.name,"_"), pjnz.list))]
   }
   
