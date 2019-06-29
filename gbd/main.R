@@ -19,8 +19,8 @@ if(length(args) > 0) {
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
   paediatric <- as.logical(args[4])
 } else {
-	run.name <- "190621_georatios_test"
-	loc <- "BFA"
+	run.name <- "190626_georatios_test_thresh"
+	loc <- "IND_4871"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- TRUE
@@ -68,6 +68,7 @@ if(geoadjust & !loc %in% no_geo_adj){
   geoadjust  <<- TRUE
 } else {
   geoadjust  <<- FALSE
+  anc.sub <<- FALSE
 }
 
 
@@ -96,15 +97,19 @@ attr(dt, 'eppd')$ancsitedat = unique(attr(dt, 'eppd')$ancsitedat)
 attr(dt, 'eppd')$hhs <- attr(dt, 'eppd')$hhs[!attr(dt, 'eppd')$hhs$se == 0,]
 attr(dt, 'specfp')$relinfectART <- 0.3
 
+#This value is borrowed from Malawi, should check whether something else is needed
+if(grepl("IND",loc)){
+  attr(dt, 'specfp')$art_alloc_mxweight <- 0.5
+}
+
 
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0=1e3, B = 1e3, number_k = 500)
+fit <- fitmod(dt, eppmod = epp.mod, B0=1e3, B = 1e3, number_k = 5)
 
 data.path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
 if(!file.exists(data.path)){
   save_data(loc, attr(dt, 'eppd'), run.name)
 }
-
 
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)

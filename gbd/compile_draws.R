@@ -17,13 +17,13 @@ if(length(args) > 0) {
   draw.fill <- as.logical(args[4])
   paediatric <- as.logical(args[5])
 } else {
-  run.name <- "190503_all"
-  loc <- "AUS"
-  n <- 1
+  run.name <- "190626_georatios_test_thresh_nohighrisk"
+  loc <- "NGA_25341"
+  n <- 10
   draw.fill <- TRUE
-  paediatric <- FALSE
+  paediatric <- TRUE
 }
-
+run.name
 ## Functions
 fill_draws <- function(fill.dt){
   missing <- setdiff(1:n, unique(fill.dt$run_num))

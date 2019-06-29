@@ -12,7 +12,7 @@ date <- substr(gsub("-","",Sys.Date()),3,8)
 library(data.table)
 
 ## Arguments
-run.name <- "190621_georatios_test"
+run.name <- "190626_georatios_test_thresh_nohighrisk"
 compare.run <- "190620_quetzal2"
 proj.end <- 2019
 n.draws <- 10
@@ -77,11 +77,12 @@ if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
   system(prop.job)
 }
 
+
 ## Launch EPP
 for(loc in loc.list) {
     ## Run EPPASM
 
-    epp.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=12:00:00 -l archive -q long.q -P ", cluster.project, " ",
+    epp.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=12:00:00 -l archive -q all.q -P ", cluster.project, " ",
                          "-e /share/temp/sgeoutput/", user, "/errors ",
                          "-o /share/temp/sgeoutput/", user, "/output ",
                          "-N ", loc, "_eppasm ",
@@ -105,32 +106,65 @@ for(loc in loc.list) {
      print(draw.string)
      system(draw.string)
 
-    # # ## Create aggregate and age-specific plots
-     plot.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:15:00 -l archive -q all.q -P ", cluster.project, " ",
-                           "-e /share/temp/sgeoutput/", user, "/errors ",
-                           "-o /share/temp/sgeoutput/", user, "/output ",
-                           "-N ", loc, "_plot_eppasm ",
-                           "-hold_jid ", loc, "_save_draws ",
-                           code.dir, "gbd/singR_shell.sh ",
-                           code.dir, "gbd/main_plot_output.R ",
-                           loc, " ", run.name, ' ', paediatric, ' ', compare.run)
-     print(plot.string)
-     system(plot.string)
 
-
-     ## Prep for reckoning
-     # prep.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:20:00 -l archive -q all.q -P ", cluster.project, " ",
-     #                      "-e /share/temp/sgeoutput/", user, "/errors ",
-     #                      "-o /share/temp/sgeoutput/", user, "/output ",
-     #                      "-N ", loc, "_apply_age_splits ",
-     #                      "-hold_jid ", loc,"_save_draws ",
-     #                      code.dir, "gbd/singR_shell.sh ",
-     #                      code.dir, "gbd/apply_age_splits.R ",
-     #                      loc, " ", run.name, " ", run.name)
-     # print(prep.string)
-     # system(prep.string)
 }
+
 check_loc_results(loc.list,paste0('/share/hiv/epp_output/gbd19/', run.name, '/compiled/'),prefix="",postfix=".csv")
+
+# ## Fill in missing India and Kenya locations
+# system(paste0("qsub -P ", cluster.project," -pe multi_slot 1 -N missing_subnats ", code.dir, "shell_R.sh ", code.dir, "epp-feature-reset/gbd/create_missing_subnats.R ", run.name))
+# 
+
+# ## Split India states to Urban Rural and generate values for Territories
+system(paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:10:00 -q all.q -P ", cluster.project, " ",
+               "-e /share/temp/sgeoutput/", user, "/errors ",
+               "-o /share/temp/sgeoutput/", user, "/output ",
+               "-N ", loc, "_ind_split ",
+               code.dir, "gbd/singR_shell.sh ",
+               code.dir, "gbd/split_ind_states.R ",
+               run.name))
+
+
+#Make sure all locations that originally went through Spectrum are there
+done.locs <- gsub("_under1_splits.csv","",list.files(paste0("/ihme/hiv/epp_output/gbd19/",run.name,"/compiled/"),pattern="_under1_splits.csv"))
+setdiff(loc.table[grepl("1",group) & spectrum==1,ihme_loc_id],done.locs)
+
+##Create all plots
+# # ## Create aggregate and age-specific plots
+for(loc in done.locs){
+  
+  if(loc %in% loc.table[grepl("IND",ihme_loc_id) & epp != 1,ihme_loc_id]){
+    compare.run <- NA
+  }
+  
+plot.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:15:00 -l archive -q all.q -P ", cluster.project, " ",
+                      "-e /share/temp/sgeoutput/", user, "/errors ",
+                      "-o /share/temp/sgeoutput/", user, "/output ",
+                      "-N ", loc, "_plot_eppasm ",
+                      "-hold_jid ", loc, "_save_draws ",
+                      code.dir, "gbd/singR_shell.sh ",
+                      code.dir, "gbd/main_plot_output.R ",
+                      loc, " ", run.name, ' ', paediatric, ' ', compare.run)
+print(plot.string)
+system(plot.string)
+
+
+## Prep for reckoning
+prep.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:20:00 -l archive -q all.q -P ", cluster.project, " ",
+                     "-e /share/temp/sgeoutput/", user, "/errors ",
+                     "-o /share/temp/sgeoutput/", user, "/output ",
+                     "-N ", loc, "_apply_age_splits ",
+                     "-hold_jid ", loc,"_save_draws ",
+                     code.dir, "gbd/singR_shell.sh ",
+                     code.dir, "gbd/apply_age_splits.R ",
+                     loc, " ", run.name, " ", run.name)
+print(prep.string)
+system(prep.string)
+
+
+
+}
+
 ## Compile plots
   plot.holds <- paste(paste0(loc.list, '_plot_eppasm'), collapse = ",")
   plot.string <- paste0("qsub -l m_mem_free=1G -l fthread=1 -l h_rt=00:15:00 -q all.q -P ", cluster.project, " ",
@@ -144,13 +178,8 @@ check_loc_results(loc.list,paste0('/share/hiv/epp_output/gbd19/', run.name, '/co
   print(plot.string)
   system(plot.string)
 
-# ## Fill in missing India and Kenya locations
-# system(paste0("qsub -P ", cluster.project," -pe multi_slot 1 -N missing_subnats ", code.dir, "shell_R.sh ", code.dir, "epp-feature-reset/gbd/create_missing_subnats.R ", run.name))
-# 
-# ## Split India states to Urban Rural
-# system(paste0("qsub -P ", cluster.project," -pe multi_slot 1 -N ind_split -hold_jid missing_subnats ", code.dir, "shell_R.sh ", code.dir, "epp-feature-reset/gbd/split_ind_states.R ", run.name))
-# 
-  
+
+ 
 
 
   

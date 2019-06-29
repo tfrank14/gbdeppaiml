@@ -854,9 +854,9 @@ sub.anc <- function(loc, dt, i, uncertainty) {
       min.dt <- post.2000[year == min(year),.(offset), by = 'site']
       
       if(subpop2 %in% unique(eppd$ancsitedat$subpop)){
-      temp.dat <- merge(site.dat,anc.dt[,.(site,subpop,year,site_pred,adm0_mean,adm0_lower,adm0_upper,offset)], by=c("site","subpop","year"),all.x=TRUE)
+      temp.dat <- merge(site.dat,anc.dt[,.(site,subpop,year,site_pred,adm0_mean,adm0_lower,adm0_upper,offset,high_risk)], by=c("site","subpop","year"),all.x=TRUE)
       } else {
-      temp.dat <- merge(site.dat,anc.dt[,.(site,subpop,year,site_pred,adm0_mean,adm0_lower,adm0_upper,offset)], by=c("site","year"),all.x=TRUE)
+      temp.dat <- merge(site.dat,anc.dt[,.(site,year,site_pred,adm0_mean,adm0_lower,adm0_upper,offset,high_risk)], by=c("site","year"),all.x=TRUE)
         
       }
       #Duplicate issue with 'pseudo sites' in Mozambique
@@ -871,13 +871,19 @@ sub.anc <- function(loc, dt, i, uncertainty) {
       temp.dat <- rbind(temp.dat, merge.dt, use.names = T)
       
       all.anc <- rbind(all.anc,temp.dat)
+      
     
     }
       
      nrow(all.anc) == nrow(eppd$ancsitedat)
      all.anc[is.na(offset), offset := 0]
-     all.anc[,c('site_pred','adm0_mean','adm0_lower') := NULL]
+     all.anc[offset > 0.15, offset := 0.15]
+     all.anc[offset < -0.15, offset := -0.15]
+     all.anc <- all.anc[!high_risk==TRUE]
+     all.anc[,c('site_pred','adm0_mean','adm0_lower','adm0_upper','high_risk') := NULL]
+     
      all.anc <- as.data.frame(all.anc)
+     
      
      eppd$ancsitedat <- all.anc
      

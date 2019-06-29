@@ -13,7 +13,7 @@ if(length(args) > 0) {
 	proj.end <- args[2]
 	run.group2 <- args[3]
 } else {
-	run.name <- "190620_quetzal2"
+	run.name <- "190626_georatios_test_thresh_nohighrisk"
 	proj.end <- 2019
 	run.group2 <- FALSE
 }
@@ -40,6 +40,7 @@ if(run.group2){
 }else{
   ## Prep inputs for standard group 1 epp locations
   epp.locs <- loc.table[epp == 1, location_id]
+
 }
 parent.locs <- loc.table[most_detailed == 0 & level == 3, location_id]
 
@@ -79,6 +80,15 @@ invisible(lapply(c(epp.locs), function(c.location_id) {
 pop.splits <- get_population(age_group_id = c(2:5, 30:32, 235), location_id = epp.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step2')
 dir.create(paste0(out.dir, '/population_splits'), showWarnings = F)
 invisible(lapply(epp.locs, function(c.location_id) {
+  c.iso <- loc.table[location_id == c.location_id, ihme_loc_id]
+  write.csv(pop.splits[location_id == c.location_id], paste0(out.dir, '/population_splits/', c.iso, ".csv"), row.names = F)
+}))
+
+###For India Rural-urban Splitting locations
+india.locs <- loc.table[level>4 & grepl("IND", ihme_loc_id) ,location_id]
+pop.splits <- get_population(age_group_id = c(2:5, 30:32, 235), location_id = india.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step2')
+dir.create(paste0(out.dir, '/population_splits/'), showWarnings = F)
+invisible(lapply(india.locs, function(c.location_id) {
   c.iso <- loc.table[location_id == c.location_id, ihme_loc_id]
   write.csv(pop.splits[location_id == c.location_id], paste0(out.dir, '/population_splits/', c.iso, ".csv"), row.names = F)
 }))

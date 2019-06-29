@@ -23,6 +23,7 @@ loc.table <- data.table(get_locations(hiv_metadata = T))
 epp.list <- sort(loc.table[epp == 1, ihme_loc_id])
 loc.list <- epp.list
 
+
 ## Launch prepare locations file
 for(loc in loc.list) {
     prep.files.string <- paste0("qsub -l m_mem_free=5G -l fthread=1 -l h_rt=12:00:00 -l archive -q all.q -P ", cluster.project, " ", 

@@ -14,7 +14,7 @@ print(args)
 if(length(args) > 0) {
   loc <- args[1]
 } else {
-  loc <- "MDG"
+  loc <- "NGA_25325"
 
 }
 ### Functions
@@ -23,7 +23,8 @@ setwd(paste0(ifelse(windows, "H:", paste0("/ihme/homes/", user)), "/eppasm/"))
 devtools::load_all()
 setwd(code.dir)
 devtools::load_all()
-debug(epp::read_epp_input)
+
+
 ### Tables
 loc.table <- data.table(get_locations(hiv_metadata = T))
 

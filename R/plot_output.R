@@ -6,7 +6,15 @@
 
 plot_15to49_draw <- function(loc, output, eppd, run.name, compare.run = '180702_numbat_combined', un.comparison = TRUE, paediatric = FALSE){
   ## Get data used in fitting model
-  data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
+  #If India child get parent
+  if(loc %in% loc.table[grepl("IND",ihme_loc_id) & epp != 1,ihme_loc_id]){
+    parent_id1 <- loc.table[ihme_loc_id==loc,parent_id]
+    loc1 <- loc.table[location_id==parent_id1,ihme_loc_id]
+    data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc1, '.csv'))
+    } else {
+    data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
+  }
+  
   data <- data[agegr == '15-49']
   data[, c('agegr', 'sex') := NULL]
   un.data <- paste0(root, "WORK/04_epi/01_database/02_data/hiv/data/prepped/GBD17_comparison_data.csv")
@@ -73,7 +81,14 @@ plot_15to49_draw <- function(loc, output, eppd, run.name, compare.run = '180702_
 }
 
 plot_15to49 <- function(loc, run.name,  compare.run = NA, paediatric = FALSE, plot.deaths = FALSE){
-  data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
+  if(loc %in% loc.table[grepl("IND",ihme_loc_id) & epp != 1,ihme_loc_id]){
+    parent_id1 <- loc.table[ihme_loc_id==loc,parent_id]
+    loc1 <- loc.table[location_id==parent_id1,ihme_loc_id]
+    data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc1, '.csv'))
+  } else {
+    data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
+  }
+  
   data <- data[metric == 'Rate']
   data[, c('age_group_id', 'metric', 'ihme_loc_id') := NULL]
   
@@ -171,7 +186,14 @@ plot_15to49 <- function(loc, run.name,  compare.run = NA, paediatric = FALSE, pl
 ## intended for comparing eppasm fits for group 2 countries to ciba/spectrum
 plot_spec_compare <- function(loc, run.name, paediatric = FALSE, c.metric = 'Rate'){
   age.map <- fread(paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/age_map.csv"))
-  data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
+  if(loc %in% loc.table[grepl("IND",ihme_loc_id) & epp != 1,ihme_loc_id]){
+    parent_id1 <- loc.table[ihme_loc_id==loc,parent_id]
+    loc1 <- loc.table[location_id==parent_id1,ihme_loc_id]
+    data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc1, '.csv'))
+  } else {
+    data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
+  }
+  
   if('Case Report' %in% data$model & c.metric == 'Rate'){
     pop.dt <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/population_single_age/', loc, '.csv'))
     diagn.dt <- data[model == 'Case Report']
@@ -274,7 +296,14 @@ plot_spec_compare <- function(loc, run.name, paediatric = FALSE, c.metric = 'Rat
 
 plot_age_specific <- function(loc, run.name, compare.run = NA, paediatric = FALSE, c.metric = 'Rate'){
   age.map <- fread(paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/age_map.csv"))
-  data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
+  if(loc %in% loc.table[grepl("IND",ihme_loc_id) & epp != 1,ihme_loc_id]){
+    parent_id1 <- loc.table[ihme_loc_id==loc,parent_id]
+    loc1 <- loc.table[location_id==parent_id1,ihme_loc_id]
+    data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc1, '.csv'))
+  } else {
+    data <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv'))
+  }
+  
   if('Case Report' %in% data$model & c.metric == 'Rate'){
     pop.dt <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/population_single_age/', loc, '.csv'))
     diagn.dt <- data[model == 'Case Report']
