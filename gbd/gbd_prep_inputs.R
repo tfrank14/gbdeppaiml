@@ -13,7 +13,7 @@ if(length(args) > 0) {
 	proj.end <- args[2]
 	run.group2 <- args[3]
 } else {
-	run.name <- "190626_georatios_test_thresh_nohighrisk"
+	run.name <- "190629_decomp4_newprev"
 	proj.end <- 2019
 	run.group2 <- FALSE
 }
@@ -32,6 +32,7 @@ loc.table <- get_locations(hiv_metadata = TRUE)
 write.csv(loc.table, paste0(out.dir, 'location_table.csv'), row.names = F)
 age.map <- get_age_map()
 write.csv(age.map, paste0(out.dir, 'age_map.csv'), row.names = F)
+source("/home/j/temp/central_comp/libraries/current/r/get_ids.R")
 
 if(run.group2){
   ## Prep inputs for all estimation locations
@@ -45,9 +46,9 @@ if(run.group2){
 parent.locs <- loc.table[most_detailed == 0 & level == 3, location_id]
 
 ## Population
-pop.all <- get_population(age_group_id = c(28, 49:127), location_id = c(epp.locs, parent.locs), year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, single_year_age = T, decomp_step = 'step2')
+pop.all <- get_population(age_group_id = c(28, 49:127), location_id = c(epp.locs, parent.locs), year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, single_year_age = T, decomp_step = 'step4')
 ## this is a separate call because you can't get 80+ with single_age_pop = TRUE
-pop.o80 <- get_population(age_group_id = c( 21), location_id = c(epp.locs, parent.locs), year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step2')
+pop.o80 <- get_population(age_group_id = c( 21), location_id = c(epp.locs, parent.locs), year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step4')
 pop.all <- rbind(pop.all, pop.o80, use.names = T)
 dir.create(paste0(out.dir, '/population_single_age'), showWarnings = F)
 invisible(lapply(c(epp.locs, parent.locs), function(c.location_id) {
@@ -58,9 +59,9 @@ invisible(lapply(c(epp.locs, parent.locs), function(c.location_id) {
 
 ###For India Rural-urban Splitting locations
 india.locs <- loc.table[level>4 & grepl("IND", ihme_loc_id) ,location_id]
-pop <- get_population(age_group_id = c(28, 49:127), location_id = india.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, single_year_age = T, decomp_step = 'step2')
+pop <- get_population(age_group_id = c(28, 49:127), location_id = india.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, single_year_age = T, decomp_step = 'step4')
 ## this is a separate call because you can't get 80+ with single_age_pop = TRUE
-pop.o80 <- get_population(age_group_id = c( 21), location_id = india.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step2')
+pop.o80 <- get_population(age_group_id = c( 21), location_id = india.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step4')
 pop.all <- rbind(pop.all, pop.o80, use.names = T)
 dir.create(paste0(out.dir, '/population_single_age/india_splitting_locs/'), showWarnings = F)
 invisible(lapply(india.locs, function(c.location_id) {
@@ -69,7 +70,7 @@ invisible(lapply(india.locs, function(c.location_id) {
   write.csv(out.pop, paste0(out.dir, '/population_single_age/india_splitting_locs/', c.iso, ".csv"), row.names = F)
 }))
 
-pop <- get_population(age_group_id = c(8:20), location_id = c(epp.locs), year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step2')
+pop <- get_population(age_group_id = c(8:20), location_id = c(epp.locs), year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step4')
 dir.create(paste0(out.dir, '/population'), showWarnings = F)
 invisible(lapply(c(epp.locs), function(c.location_id) {
   out.pop <- copy(pop[location_id == c.location_id])
@@ -77,7 +78,7 @@ invisible(lapply(c(epp.locs), function(c.location_id) {
   write.csv(out.pop, paste0(out.dir, '/population/', c.iso, ".csv"), row.names = F)
 }))
 
-pop.splits <- get_population(age_group_id = c(2:5, 30:32, 235), location_id = epp.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step2')
+pop.splits <- get_population(age_group_id = c(2:5, 30:32, 235), location_id = epp.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step4')
 dir.create(paste0(out.dir, '/population_splits'), showWarnings = F)
 invisible(lapply(epp.locs, function(c.location_id) {
   c.iso <- loc.table[location_id == c.location_id, ihme_loc_id]
@@ -86,7 +87,7 @@ invisible(lapply(epp.locs, function(c.location_id) {
 
 ###For India Rural-urban Splitting locations
 india.locs <- loc.table[level>4 & grepl("IND", ihme_loc_id) ,location_id]
-pop.splits <- get_population(age_group_id = c(2:5, 30:32, 235), location_id = india.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step2')
+pop.splits <- get_population(age_group_id = c(2:5, 30:32, 235), location_id = india.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step4')
 dir.create(paste0(out.dir, '/population_splits/'), showWarnings = F)
 invisible(lapply(india.locs, function(c.location_id) {
   c.iso <- loc.table[location_id == c.location_id, ihme_loc_id]
@@ -94,9 +95,18 @@ invisible(lapply(india.locs, function(c.location_id) {
 }))
 
 ## Migration
-## TODO: migration filepath needs to be updated for GBD 2019 decomp 3
-mig <- fread(paste0('/ihme/fertilitypop/gbd_2017/population/modeling/popReconstruct/v96/best/net_migrants.csv'))
-setnames(mig, c('year_id', 'sex_id'), c('year', 'sex'))
+mig <- fread(paste0('/ihme/fertilitypop/population/popReconstruct/133/upload/net_migration_single_year.csv'))[measure_id==19]
+#fread(paste0('/ihme/fertilitypop/gbd_2017/population/modeling/popReconstruct/v96/best/net_migrants.csv'))
+age_groups <- get_ids("age_group")
+age_groups[age_group_name=="<1 year",age_group_name := "0"]
+mig = merge(mig,age_groups, by='age_group_id')
+mig <- mig[age_group_name %in% c(0:95)]
+mig$age_group_name <- as.integer(mig$age_group_name)
+mig = merge(mig,loc.table[,.(location_id,ihme_loc_id)],by="location_id")
+mig = mig[,c('age_group_id','measure_id'):=NULL]
+setnames(mig, c('year_id', 'sex_id','mean','age_group_name'), c('year', 'sex','value','age'))
+
+
 mig[age > 80, age := 80]
 mig <- mig[year >= 1970, .(value = sum(value)), by = c('age', 'sex', 'year', 'ihme_loc_id')]
 dir.create(paste0(out.dir, '/migration'), showWarnings = F)
@@ -128,7 +138,7 @@ invisible(lapply(epp.locs, function(c.location_id){
 
 
 ## ASFR
-asfr <- get_covariate_estimates(covariate_id = 13, location_id = epp.locs, decomp_step = 'step2')
+asfr <- get_covariate_estimates(covariate_id = 13, location_id = epp.locs, decomp_step = 'step4')
 asfr <- asfr[age_group_id %in% c(8:14) & sex_id == 2, list(year_id, age_group_id, mean_value, location_id)]
 asfr[, age := (age_group_id - 5) * 5]
 setnames(asfr, c('mean_value', 'year_id'), c('value', 'year'))
@@ -139,7 +149,7 @@ invisible(lapply(epp.locs, function(c.location_id){
 }))
 
 ## Births and SRB
-births <- get_population(age_group_id = 164, location_id = epp.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step2')
+births <- get_population(age_group_id = 164, location_id = epp.locs, year_id = 1970:2019, gbd_round_id = 6, sex_id = 1:2, decomp_step = 'step4')
 dir.create(paste0(out.dir, '/births'), showWarnings = F)
 dir.create(paste0(out.dir, '/SRB'), showWarnings = F)
 invisible(lapply(epp.locs, function(c.location_id) {
@@ -158,7 +168,7 @@ invisible(lapply(epp.locs, function(c.location_id) {
 
 ## Prep CoD data and case notifications
 if(run.group2 == TRUE){
-  cod.dt <- get_cod_data(cause_id = 298, decomp_step = 'step2')
+  cod.dt <- get_cod_data(cause_id = 298, decomp_step = 'step4')
   cod.dt <- cod.dt[data_type == 'Vital Registration']
   cod.dt <- cod.dt[, list(model = 'VR', type = 'point', deaths = sum(deaths), rate = weighted.mean(x = rate, w = pop)), by = .(location_id, year, age_group_id, sex)]
   cod.dt <- cod.dt[age_group_id != 27]

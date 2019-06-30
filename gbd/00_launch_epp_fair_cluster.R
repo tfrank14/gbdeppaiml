@@ -12,10 +12,10 @@ date <- substr(gsub("-","",Sys.Date()),3,8)
 library(data.table)
 
 ## Arguments
-run.name <- "190626_georatios_test_thresh_nohighrisk"
-compare.run <- "190620_quetzal2"
+run.name <- "190629_decomp4_newprev"
+compare.run <- "190626_georatios_test_thresh_nohighrisk"
 proj.end <- 2019
-n.draws <- 10
+n.draws <- 2
 run.group2 <- FALSE
 paediatric <- TRUE
 cluster.project <- "proj_hiv"
@@ -28,7 +28,7 @@ dir.create(dir, showWarnings = FALSE)
 
 ### Functions
 source(paste0(root,"/Project/Mortality/shared/functions/check_loc_results.r"))
-library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
+library(mortdb, lib = "/ihme/mortality/shared/r")
 
 ### Tables
 loc.table <- data.table(get_locations(hiv_metadata = T))
@@ -36,6 +36,21 @@ loc.table <- data.table(get_locations(hiv_metadata = T))
 ### Code
 epp.list <- sort(loc.table[epp == 1 & grepl('1', group), ihme_loc_id])
 loc.list <- epp.list
+
+#Make comparison ART plots
+for(loc in loc.list) { 
+art.string <- paste0("qsub -l m_mem_free=1G -l fthread=1 -l h_rt=00:30:00 -l archive -q all.q -P ", cluster.project, " ",
+                     "-e /share/temp/sgeoutput/", user, "/errors ",
+                     "-o /share/temp/sgeoutput/", user, "/output ",
+                     "-N ", loc, "_plot_art ",
+                     code.dir, "gbd/singR_shell.sh ",
+                     paste0(paste0("/ihme/homes/", user), "/hiv_gbd2019/01_prep_ART_CovCaps/plot_ART.R "),
+                     "2019 ", loc, " ", "2017", " ",run.name)
+print(art.string )
+system(art.string )
+}
+
+
 # Cache inputs
 if(!file.exists(paste0(input.dir, "population/"))) {
   prep.job <- paste0("qsub -l m_mem_free=10G -l fthread=1 -l h_rt=00:30:00 -q all.q -N eppasm_prep_inputs_", run.name," -P ",cluster.project," ",
@@ -62,7 +77,7 @@ if(!file.exists(paste0(input.dir, "population/"))) {
 ## It should, because I updated our supplemental survey data set, but worth double-checking to make sure all location-years are there
 ## Also, we should decide what subnationals we want to use age, sex-specific data in; 
 ## Currently just using 15-49 data in Kenya counties due to small n
-file.copy(from = '/share/hiv/data/prevalence_surveys/GBD2019_prevalence_surveys.csv', 
+file.copy(from = '/share/hiv/data/prevalence_surveys/GBD2019_prevalence_surveys_decomp4_FORUSE.csv', 
           to = paste0("/ihme/hiv/epp_input/gbd19/", run.name, "/prev_surveys.csv"))
 
 # Prepare ART proportions
@@ -79,8 +94,7 @@ if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
 
 
 ## Launch EPP
-for(loc in loc.list) {
-    ## Run EPPASM
+for(loc in loc.list) {    ## Run EPPASM
 
     epp.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=12:00:00 -l archive -q all.q -P ", cluster.project, " ",
                          "-e /share/temp/sgeoutput/", user, "/errors ",
@@ -119,7 +133,7 @@ check_loc_results(loc.list,paste0('/share/hiv/epp_output/gbd19/', run.name, '/co
 system(paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:10:00 -q all.q -P ", cluster.project, " ",
                "-e /share/temp/sgeoutput/", user, "/errors ",
                "-o /share/temp/sgeoutput/", user, "/output ",
-               "-N ", loc, "_ind_split ",
+               "-N ", "india_split ",
                code.dir, "gbd/singR_shell.sh ",
                code.dir, "gbd/split_ind_states.R ",
                run.name))

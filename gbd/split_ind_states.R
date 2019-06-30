@@ -34,7 +34,7 @@ pop.dir <- list(paste0('/share/hiv/epp_input/gbd19/',run.name,"/population_singl
                  paste0('/share/hiv/epp_input/gbd19/',run.name,"/population_single_age/india_splitting_locs/"))
 
 ### Functions
-library(mortdb, lib = "/home/j/WORK/02_mortality/shared/r")
+library(mortdb, lib = "/ihme/mortality/shared/r")
 
 
 ##Find corrent age groups and sex ids to match EPP-ASM output using one location

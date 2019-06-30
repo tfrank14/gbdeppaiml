@@ -90,7 +90,7 @@ append.vr <- function(dt, loc, run.name){
   cod.dt <- rbind(backfill, cod.dt, use.names = T)
   fill <- expand.grid(year = 1971:2019, sex = c('male', 'female'), age = seq(15, 80, 5))
   cod.dt <- merge(cod.dt, fill, by = c('year', 'sex', 'age'), all = T)
-  vr.deaths <- dcast.data.table(cod.dt, year + age ~ sex, value.var = 'mean')
+  vr.deaths <- data.table::dcast(cod.dt, year + age ~ sex, value.var = 'mean')
   vr.deaths <- vr.deaths[order(year, age)]
   vr <- array(0, c(14, 2, length(years) - 1))
   for(j in 1:(length(years) - 1)){
@@ -148,7 +148,7 @@ append.deaths <- function(dt, loc, run.name, start.year, stop.year){
   vr.deaths[,age_group_id := NULL]
   backfill <- expand.grid(year_id = 1971:1980, sex_id = 1:2, age_group_name_short = seq(15, 80, 5), value = 0)
   vr.deaths <- rbind(vr.deaths, backfill, use.names = T)
-  vr.deaths <- dcast.data.table(vr.deaths, year_id + age_group_name_short ~ sex_id, value.var = 'value')
+  vr.deaths <- data.table::dcast(vr.deaths, year_id + age_group_name_short ~ sex_id, value.var = 'value')
   vr.deaths <- vr.deaths[order(year_id, age_group_name_short)]
   vr <- array(0, c(14, 2, length(years) - 1))
   for(j in 1:(length(years) - 1)){
@@ -166,7 +166,7 @@ append.deaths <- function(dt, loc, run.name, start.year, stop.year){
   backfill <- expand.grid(year_id = 1971:1980, sex_id = 1:2, age = 15:80, value = 0)
   deaths <- rbind(backfill, deaths)
   deaths <- deaths[order(year_id, age)]
-  deaths <- dcast.data.table(deaths, year_id + age ~ sex_id, value.var = 'value')
+  deaths <- data.table::dcast(deaths, year_id + age ~ sex_id, value.var = 'value')
   
   ## rep 10x for spectrum timesteps (if we're removing deaths directly from population...)
   deaths_dt <- array(0, c(66,2,(length(years) -1) * 10))
@@ -217,7 +217,7 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   pop <- pop[order(age)]
   ped.pop <- pop[age <= 14]
   ped.pop[, sex := ifelse(sex_id == 1, 'Male', 'Female')]
-  ped.pop <- dcast.data.table(ped.pop[,.(age, sex, year, population)], age + year ~ sex, value.var = 'population')
+  ped.pop <- data.table::dcast(ped.pop[,.(age, sex, year, population)], age + year ~ sex, value.var = 'population')
   ped.basepop <- as.matrix(ped.pop[year == start.year,.(Male, Female)])
   rownames(ped.basepop) <- 0:14
   attr(dt, 'specfp')$paedbasepop <- ped.basepop
@@ -232,7 +232,7 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   prog <- fread('/share/hiv/epp_input/gbd19/paeds/childProgParam.csv')
   progu5 <- prog[age %in% 0:4]
   progu5 <- convert_paed_cd4(progu5, 'u5')
-  progu5 <- dcast.data.table(progu5, cat + sex ~ age, value.var = 'value')
+  progu5 <- data.table::dcast(progu5, cat + sex ~ age, value.var = 'value')
   progu5[,sex := ifelse(sex == 'male', 'Male', 'Female')]
   attr(dt, 'specfp')$prog_u5 <- array(0, c(6, 5, 2))
   dimnames(attr(dt, 'specfp')$prog_u5) <- list(cat = 1:6, age = 0:4, sex = c('Male', 'Female'))
@@ -244,7 +244,7 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   }
   progu15 <- prog[age %in% 5:15]
   progu15 <- convert_paed_cd4(progu15, 'u15')
-  progu15 <- dcast.data.table(progu15, cat + sex ~ age, value.var = 'value')
+  progu15 <- data.table::dcast(progu15, cat + sex ~ age, value.var = 'value')
   progu15[,sex := ifelse(sex == 'male', 'Male', 'Female')]
   attr(dt, 'specfp')$prog_u15 <- array(0, c(5, 10, 2))
   dimnames(attr(dt, 'specfp')$prog_u15) <- list(cat = 1:5, age = 5:14, sex = c('Male', 'Female'))
@@ -262,7 +262,7 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   mort.art[,category := NULL]
   mortu5 <- mort.art[age %in% 0:4]
   mortu5 <- convert_paed_cd4(mortu5, 'u5')
-  mortu5 <- dcast.data.table(mortu5, age + sex + artdur ~ cat, value.var = 'value')
+  mortu5 <- data.table::dcast(mortu5, age + sex + artdur ~ cat, value.var = 'value')
   mortu5[,sex := ifelse(sex == 'male', 'Male', 'Female')]
   attr(dt, 'specfp')$art_mort_u5 <- array(0, c(3, 7, 5, 2))
   dimnames(attr(dt, 'specfp')$art_mort_u5) <- list(artdur = c('ART0MOS', 'ART6MOS', 'ART1YR'), cat = 1:7, age = paste0(0:4), sex = c('Male', 'Female'))
@@ -275,7 +275,7 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   }
   mortu15 <- mort.art[age %in% 5:14]
   mortu15 <- convert_paed_cd4(mortu15, 'u15')
-  mortu15 <- dcast.data.table(mortu15, age + sex + artdur ~ cat, value.var = 'value')
+  mortu15 <- data.table::dcast(mortu15, age + sex + artdur ~ cat, value.var = 'value')
   mortu15[,sex := ifelse(sex == 'male', 'Male', 'Female')]
   attr(dt, 'specfp')$art_mort_u15 <- array(0, c(3, 6, 10, 2))
   dimnames(attr(dt, 'specfp')$art_mort_u15) <- list(artdur = c('ART0MOS', 'ART6MOS', 'ART1YR'), cat = 1:6, age = paste0(5:14), sex = c('Male', 'Female'))
@@ -289,7 +289,7 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   mort.offart <- fread('/share/hiv/epp_input/gbd19/paeds/childMortNoART.csv')
   mortu5 <- mort.offart[age %in% 0:4]
   mortu5 <- convert_paed_cd4(mortu5, 'u5')
-  mortu5 <- dcast.data.table(mortu5, age + birth_category ~ cat, value.var = 'value')
+  mortu5 <- data.table::dcast(mortu5, age + birth_category ~ cat, value.var = 'value')
   attr(dt, 'specfp')$cd4_mort_u5 <- array(0, c(4, 7, 5, 2))
   dimnames(attr(dt, 'specfp')$cd4_mort_u5) <- list(birth_category = c("BF0", "BF12", "BF7", "perinatal"), cat = 1:7, age = paste0(0:4), sex = c('Male', 'Female'))
   for(c.sex in c('Male', 'Female')){
@@ -301,7 +301,7 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   }
   mortu15 <- mort.offart[age %in% 5:14]
   mortu15 <- convert_paed_cd4(mortu15, 'u15')
-  mortu15 <- dcast.data.table(mortu15, age + birth_category ~ cat, value.var = 'value')
+  mortu15 <- data.table::dcast(mortu15, age + birth_category ~ cat, value.var = 'value')
   attr(dt, 'specfp')$cd4_mort_u15 <- array(0, c(4, 6, 10, 2))
   dimnames(attr(dt, 'specfp')$cd4_mort_u15) <- list(birth_category = c("BF0", "BF12", "BF7", "perinatal"), cat = 1:6, age = paste0(5:14), sex = c('Male', 'Female'))
   for(c.sex in c('Male', 'Female')){
@@ -338,7 +338,7 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   artdist <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/childARTDist/', substr(loc, 1, 3), '.csv'))
   artdist <- artdist[year %in% years]
   artdist <- extend.years(artdist, years)
-  artdist <- dcast.data.table(artdist, year~age)
+  artdist <- data.table::dcast(artdist, year~age)
   artdist[, year := NULL]
   artdist <- as.matrix(artdist)
   rownames(artdist) <- years
@@ -407,7 +407,7 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   surv[,variable := NULL]
   surv[sex == 'male', sex := 'Male']
   surv[sex == 'female', sex := 'Female']
-  surv <- dcast.data.table(surv, year + age ~ sex)
+  surv <- data.table::dcast(surv, year + age ~ sex)
   surv = extend.years(surv, years)
   surv <- surv[age %in% 0:14]
   attr(dt, 'specfp')$paed_Sx <- array(0, c(15, 2, length(years)))
@@ -421,8 +421,9 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   mig <- fread(paste0(dir, '/migration/', loc, '.csv'))
   setnames(mig, 'sex', 'sex_id')
   mig <- mig[age %in% 0:14]
+  mig <- mig[sex_id %in% c(1,2)]
   mig[, sex := ifelse(sex_id == 1, 'Male', 'Female')]
-  mig <- dcast.data.table(mig[,.(year, age, value, sex)], year + age ~ sex)
+  mig <- data.table::dcast(mig[,.(year, age, value, sex)], year + age ~ sex)
   mig <- extend.years(mig, years)
   attr(dt, 'specfp')$paed_mig <- array(0, c(15, 2, length(years)))
   for(i in 1:length(years)){
@@ -447,7 +448,7 @@ sub.pop.params.specfp <- function(fp, loc, k){
   pop <- pop[order(age)]
   pop <- pop[age %in% 15:80]
   pop[, sex := ifelse(sex_id == 1, 'Male', 'Female')]
-  pop <- dcast.data.table(pop[,.(age, sex, year, population)], age + year ~ sex, value.var = 'population')
+  pop <- data.table::dcast(pop[,.(age, sex, year, population)], age + year ~ sex, value.var = 'population')
   fp$targetpop <- array(0, c(66, 2, length(years)))
   dimnames(fp$targetpop) <- list(paste0(15:80), c('Male', 'Female'), years)
   fp$basepop <- array(0, c(66, 2))
@@ -469,7 +470,7 @@ sub.pop.params.specfp <- function(fp, loc, k){
   surv[,variable := NULL]
   surv[sex == 'male', sex := 'Male']
   surv[sex == 'female', sex := 'Female']
-  surv <- dcast.data.table(surv, year + age ~ sex)
+  surv <- data.table::dcast(surv, year + age ~ sex)
   surv = extend.years(surv, years)
   surv <- surv[age %in% 15:80]
   fp$Sx <- array(0, c(66, 2, length(years)))
@@ -480,16 +481,7 @@ sub.pop.params.specfp <- function(fp, loc, k){
     fp$Sx[,,i] <- sx.year
   }
   
-  ## mx
-  # mx <- surv
-  # mx[, Female := -log(Female)]
-  # mx[, Male := -log(Male)]
-  # for(i in 1:length(years)){
-  #   mx.year = as.matrix(mx[year == as.integer(years[i]), .(Male, Female)])
-  #   rownames(mx.year) <- 0:80
-  #   fp$mx[,,i] <- sx.year
-  # }
-  
+
   ## ASFR
   asfr <- fread(paste0(dir,'/ASFR/', loc, '.csv'))
   asfr <- extend.years(asfr, years)
@@ -501,7 +493,7 @@ sub.pop.params.specfp <- function(fp, loc, k){
       asfr <- rbind(asfr, asfr.ext)
     }
   }
-  asfr <- as.matrix(dcast.data.table(asfr, age~year))
+  asfr <- as.matrix(data.table::dcast.data.table(asfr, age~year))
   asfr <- asfr[,2:(length(years) + 1)]
   rownames(asfr) <- 15:49
   fp$asfr <- array(0, c(35, length(years)))
@@ -525,8 +517,9 @@ sub.pop.params.specfp <- function(fp, loc, k){
   ## Migration
   mig <- fread(paste0(dir, '/migration/', loc, '.csv'))
   setnames(mig, 'sex', 'sex_id')
+  mig <- mig[sex_id %in% c(1,2),]
   mig[, sex := ifelse(sex_id == 1, 'Male', 'Female')]
-  mig <- dcast.data.table(mig[,.(year, age, value, sex)], year + age ~ sex)
+  mig <- data.table::dcast(mig[,.(year, age, value, sex)], year + age ~ sex)
   mig <- extend.years(mig, years)
   fp$netmigr <- array(0, c(66, 2, length(years)))
   dimnames(fp$netmigr) <- list(paste0(15:80), c('Male', 'Female'), paste0(years))
@@ -592,6 +585,7 @@ sub.prev.granular <- function(dt, loc){
   age.prev.dt[sex_id == 3, sex := 'both']
   age.prev.dt[,c('used','deff', 'deff_approx') := list(TRUE,2, 2)]
   age.prev.dt <- age.prev.dt[,.(year, sex, agegr, n, prev, se, used, deff, deff_approx)]
+  age.prev.dt$n <- as.numeric(age.prev.dt$n)
   gen.pop.dict <- c("General Population", "General population", "GP", "GENERAL POPULATION", "GEN. POPL.", "General population(Low Risk)", "Remaining Pop")
   if(length(dt) == 1) {
     gen.pop.i <- 1
@@ -879,6 +873,7 @@ sub.anc <- function(loc, dt, i, uncertainty) {
      all.anc[is.na(offset), offset := 0]
      all.anc[offset > 0.15, offset := 0.15]
      all.anc[offset < -0.15, offset := -0.15]
+     all.anc[is.na(high_risk),high_risk := FALSE]
      all.anc <- all.anc[!high_risk==TRUE]
      all.anc[,c('site_pred','adm0_mean','adm0_lower','adm0_upper','high_risk') := NULL]
      
