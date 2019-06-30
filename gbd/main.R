@@ -20,7 +20,7 @@ if(length(args) > 0) {
   paediatric <- as.logical(args[4])
 } else {
 	run.name <- "190629_decomp4_newprev"
-	loc <- "ZWE"
+	loc <- "NGA_25332"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- TRUE
@@ -77,8 +77,6 @@ if(geoadjust & !loc %in% no_geo_adj){
 dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, 
                        pop.sub, anc.sub, anc.backcast, prev.sub, art.sub, sexincrr.sub, popadjust, age.prev, paediatric, anc.rt, geoadjust)
 
-
-
 if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 
 if(grepl('NGA', loc)){
@@ -104,7 +102,7 @@ if(grepl("IND",loc)){
 
 
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0=1e3, B = 1e3, number_k = 100)
+fit <- fitmod(dt, eppmod = epp.mod, B0=1e3, B = 1e3, number_k = 500)
 
 data.path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
 if(!file.exists(data.path)){

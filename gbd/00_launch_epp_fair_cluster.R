@@ -12,10 +12,10 @@ date <- substr(gsub("-","",Sys.Date()),3,8)
 library(data.table)
 
 ## Arguments
-run.name <- "190629_decomp4_newprev"
+run.name <- "190629_decomp4_newart"
 compare.run <- "190626_georatios_test_thresh_nohighrisk"
 proj.end <- 2019
-n.draws <- 2
+n.draws <- 15
 run.group2 <- FALSE
 paediatric <- TRUE
 cluster.project <- "proj_hiv"
@@ -38,6 +38,7 @@ epp.list <- sort(loc.table[epp == 1 & grepl('1', group), ihme_loc_id])
 loc.list <- epp.list
 
 #Make comparison ART plots
+if(!file.exists(paste0(input.dir, "/art_plots.pdf"))) {
 for(loc in loc.list) { 
 art.string <- paste0("qsub -l m_mem_free=1G -l fthread=1 -l h_rt=00:30:00 -l archive -q all.q -P ", cluster.project, " ",
                      "-e /share/temp/sgeoutput/", user, "/errors ",
@@ -50,6 +51,16 @@ print(art.string )
 system(art.string )
 }
 
+plot.dir <- paste0("/ihme/hiv/epp_input/gbd19/",run.name,"/art_plots/")
+setwd(plot.dir)
+# Combine location-specific plots
+system(paste0("/usr/bin/ghostscript -dBATCH -dSAFER -DNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=art_plots.pdf -f *"))
+# Move to parent directory
+system(paste0("mv ", plot.dir, "/art_plots.pdf ",input.dir,"/"))
+# Delete location specific plots
+system(paste0("rm -r -f ", plot.dir, "/"))
+
+}
 
 # Cache inputs
 if(!file.exists(paste0(input.dir, "population/"))) {

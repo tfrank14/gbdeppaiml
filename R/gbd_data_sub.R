@@ -874,6 +874,12 @@ sub.anc <- function(loc, dt, i, uncertainty) {
      all.anc[offset > 0.15, offset := 0.15]
      all.anc[offset < -0.15, offset := -0.15]
      all.anc[is.na(high_risk),high_risk := FALSE]
+     
+     ##This corrects a mistake in the file generation - should be corrected in the initial generation
+     if(loc=="NGA_25332"){
+       all.anc[,high_risk := FALSE]
+     }
+     
      all.anc <- all.anc[!high_risk==TRUE]
      all.anc[,c('site_pred','adm0_mean','adm0_lower','adm0_upper','high_risk') := NULL]
      
@@ -992,9 +998,8 @@ sub.anc <- function(loc, dt, i, uncertainty) {
       temp.loc <- loc
     }
     
-    ## TODO
-    #Will need to update once we have 2018
-    for(c.year in c('UNAIDS_2017', 'UNAIDS_2016', 'UNAIDS_2015', '140520')){
+    #Still need to split 2019 to sublocations
+    for(c.year in c('UNAIDS_2019', 'UNAIDS_2017', 'UNAIDS_2016', 'UNAIDS_2015', '140520')){
       art.path <-paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/extrapolate_ART/PV_testing/", c.year, "/", temp.loc, "_Adult_ART_cov.csv") 
       if(file.exists(art.path)){
         art.dt <- fread(art.path)
