@@ -19,8 +19,8 @@ if(length(args) > 0) {
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
   paediatric <- as.logical(args[4])
 } else {
-	run.name <- "190629_decomp4_newart"
-	loc <- "KEN_35617"
+	run.name <- "190629_decomp4_paedsart"
+	loc <- "SEN"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- TRUE
@@ -101,7 +101,7 @@ if(grepl("IND",loc)){
 
 
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0=1e3, B = 1e3, number_k = 500)
+fit <- fitmod(dt, eppmod = epp.mod, B0 = 1e3, B = 1e2, number_k = 100)
 
 data.path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
 if(!file.exists(data.path)){

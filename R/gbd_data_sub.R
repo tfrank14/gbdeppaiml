@@ -1013,13 +1013,12 @@ sub.anc <- function(loc, dt, i, uncertainty) {
     for(c.year in c('UNAIDS_2019', 'UNAIDS_2017', 'UNAIDS_2016', 'UNAIDS_2015', '140520')){
       art.path <-paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/extrapolate_ART/PV_testing/", c.year, "/", temp.loc, "_Adult_ART_cov.csv") 
       if(file.exists(art.path)){
+        print(c.year)
         art.dt <- fread(art.path)
         break;
       }
     }
     art.dt[is.na(art.dt)] <- 0
-    setnames(art.dt,"ART_cov_perc","ART_cov_pct")
-    
     ##Need this to be logical later
     art.dt[, type := ifelse(ART_cov_pct > 0, TRUE, FALSE)]	
     
