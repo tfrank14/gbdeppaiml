@@ -313,17 +313,13 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   }
   
   
-  temp.loc <- loc
-  for(c.year in c('UNAIDS_2019', 'UNAIDS_2017', 'UNAIDS_2016', 'UNAIDS_2015', '140520')){
-    art.path <-paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/AIM_assumptions/program_stats/ART_children/", c.year, "/", temp.loc, "_Child_ART_cov.csv") 
-    if(file.exists(art.path)){
-      art.dt.child <- fread(art.path)
-      break;
-    }
+  art.path <-paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/AIM_assumptions/program_stats/ART_children/UNAIDS_2019/", loc, "_Child_ART_cov.csv") 
+  if(file.exists(art.path)){
+    art <- fread(art.path)
+  }else{
+    art <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/childARTcoverage/', loc, '.csv'))
   }
-  
-  art <- art.dt.child
-  #art <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/childARTcoverage/', loc, '.csv'))
+
   art <- extend.years(art, years)
   if(min(art$year) > start.year){
     backfill <- data.table(year = start.year:(min(art$year) - 1))
