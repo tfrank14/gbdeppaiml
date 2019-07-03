@@ -12,10 +12,11 @@ date <- substr(gsub("-","",Sys.Date()),3,8)
 library(data.table)
 
 ## Arguments
-run.name <- "190629_decomp4_newart"
+
+run.name <- "190629_decomp4_paedsart"
 compare.run <- "190629_decomp4_newprev"
 proj.end <- 2019
-n.draws <- 2
+n.draws <- 1
 run.group2 <- FALSE
 paediatric <- TRUE
 cluster.project <- "proj_hiv"

@@ -96,20 +96,32 @@ collapse_epp <- function(loc){
   cc <- attr(eppd.list[[1]], 'country_code')
 
   subpop.tot <- loc
- 
-  eppd.tot <- eppd.list[[1]]
-  names(eppd.tot) <- names(eppd.list[[1]])
   
-  for(kk in 1:length(names(eppd.tot))){
-    attr(eppd.tot[[kk]],"subpop") <- names(eppd.tot)[[kk]]
+  eppd.tot <- eppd.list
+  names(eppd.tot) <- names(eppd.list)
+  
+  if(length(file.list) > 1){
+    add_index <<- TRUE
+    for(kk in 1:length(eppd.list)){
+      attr(eppd.tot[[kk]],"subpop") <-   names(eppd.list[[kk]])[1]
+    }
+  } else {
+    add_index <<- FALSE
+    eppd.tot <- eppd.list[[1]]
+    names(eppd.tot) <- names(eppd.list[[1]])
+    
+    for(kk in 1:length(names(eppd.tot))){
+      attr(eppd.tot[[kk]],"subpop") <- names(eppd.tot)[[kk]]
+    }
+    
   }
-  
-  
-  ancsitedat <- melt_ancsite_data(eppd.tot)
-  hhsdat <-  tidy_hhs_data(eppd.tot)
+
+  ancsitedat <- melt_ancsite_data(eppd.tot, add_index = add_index)
+  hhsdat <-  tidy_hhs_data(eppd.tot, add_index = add_index)
   
   eppd.list <- unlist(eppd.list,recursive = FALSE)
   eppd.tot <- eppd.list[1]
+  subpop.tot <- loc
   names(eppd.tot) <- subpop.tot
   eppd.tot[[subpop.tot]]$ancsitedat <- ancsitedat
   eppd.tot[[subpop.tot]]$hhs <- hhsdat
