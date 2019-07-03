@@ -33,8 +33,8 @@ prop.path <- paste0('/share/hiv/epp_input/gbd19/art_prop.csv')
 pop.dir <- list(paste0('/share/hiv/epp_input/gbd19/',run.name,"/population_single_age/"),
                  paste0('/share/hiv/epp_input/gbd19/',run.name,"/population_single_age/india_splitting_locs/"))
 
-spec.inc.path <- paste0('/ihme/hiv/epp_output/gbd19', run.name, '/compiled/IND_inc/')
-spec.prev.path <- paste0('/ihme/hiv/epp_output/gbd19', run.name, '/compiled/IND_prev/')
+spec.inc.path <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/compiled/IND_inc/')
+spec.prev.path <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/compiled/IND_prev/')
 dir.create(spec.inc.path, showWarnings = F)
 dir.create(spec.prev.path, showWarnings = F)
 ### Functions
