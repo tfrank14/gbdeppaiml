@@ -312,7 +312,18 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
     }
   }
   
-  art <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/childARTcoverage/', loc, '.csv'))
+  
+  temp.loc <- loc
+  for(c.year in c('UNAIDS_2019', 'UNAIDS_2017', 'UNAIDS_2016', 'UNAIDS_2015', '140520')){
+    art.path <-paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/AIM_assumptions/program_stats/ART_children/", c.year, "/", temp.loc, "_Child_ART_cov.csv") 
+    if(file.exists(art.path)){
+      art.dt.child <- fread(art.path)
+      break;
+    }
+  }
+  
+  art <- art.dt.child
+  #art <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/childARTcoverage/', loc, '.csv'))
   art <- extend.years(art, years)
   if(min(art$year) > start.year){
     backfill <- data.table(year = start.year:(min(art$year) - 1))
@@ -992,11 +1003,11 @@ sub.anc <- function(loc, dt, i, uncertainty) {
   
   
   sub.art <- function(dt, loc, use.recent.unaids = FALSE) {
-    if(grepl("KEN", loc) & loc.table[ihme_loc_id == loc, level] == 5) {
-      temp.loc <- loc.table[location_id == loc.table[ihme_loc_id == loc, parent_id], ihme_loc_id]
-    } else {
+    # if(grepl("KEN", loc) & loc.table[ihme_loc_id == loc, level] == 5) {
+    #   temp.loc <- loc.table[location_id == loc.table[ihme_loc_id == loc, parent_id], ihme_loc_id]
+    # } else {
       temp.loc <- loc
-    }
+    # }
     
     #Still need to split 2019 to sublocations
     for(c.year in c('UNAIDS_2019', 'UNAIDS_2017', 'UNAIDS_2016', 'UNAIDS_2015', '140520')){
@@ -1007,6 +1018,7 @@ sub.anc <- function(loc, dt, i, uncertainty) {
       }
     }
     art.dt[is.na(art.dt)] <- 0
+    setnames(art.dt,"ART_cov_perc","ART_cov_pct")
     
     ##Need this to be logical later
     art.dt[, type := ifelse(ART_cov_pct > 0, TRUE, FALSE)]	

@@ -13,9 +13,9 @@ library(data.table)
 
 ## Arguments
 run.name <- "190629_decomp4_newart"
-compare.run <- "190626_georatios_test_thresh_nohighrisk"
+compare.run <- "190629_decomp4_newprev"
 proj.end <- 2019
-n.draws <- 15
+n.draws <- 2
 run.group2 <- FALSE
 paediatric <- TRUE
 cluster.project <- "proj_hiv"
@@ -40,15 +40,15 @@ loc.list <- epp.list
 #Make comparison ART plots
 if(!file.exists(paste0(input.dir, "/art_plots.pdf"))) {
 for(loc in loc.list) { 
-art.string <- paste0("qsub -l m_mem_free=1G -l fthread=1 -l h_rt=00:30:00 -l archive -q all.q -P ", cluster.project, " ",
-                     "-e /share/temp/sgeoutput/", user, "/errors ",
-                     "-o /share/temp/sgeoutput/", user, "/output ",
-                     "-N ", loc, "_plot_art ",
-                     code.dir, "gbd/singR_shell.sh ",
-                     paste0(paste0("/ihme/homes/", user), "/hiv_gbd2019/01_prep_ART_CovCaps/plot_ART.R "),
-                     "2019 ", loc, " ", "2017", " ",run.name)
-print(art.string )
-system(art.string )
+  art.string <- paste0("qsub -l m_mem_free=1G -l fthread=1 -l h_rt=00:30:00 -l archive -q all.q -P ", cluster.project, " ",
+                       "-e /share/temp/sgeoutput/", user, "/errors ",
+                       "-o /share/temp/sgeoutput/", user, "/output ",
+                       "-N ", loc, "_plot_art ",
+                       code.dir, "gbd/singR_shell.sh ",
+                       paste0(paste0("/ihme/homes/", user), "/hiv_gbd2019/01_prep_ART_CovCaps/plot_ART.R "),
+                       "2019 ", loc, " ", "2017", " ",run.name)
+  print(art.string )
+  system(art.string )
 }
 
 plot.dir <- paste0("/ihme/hiv/epp_input/gbd19/",run.name,"/art_plots/")
@@ -88,8 +88,7 @@ if(!file.exists(paste0(input.dir, "population/"))) {
 ## It should, because I updated our supplemental survey data set, but worth double-checking to make sure all location-years are there
 ## Also, we should decide what subnationals we want to use age, sex-specific data in; 
 ## Currently just using 15-49 data in Kenya counties due to small n
-file.copy(from = '/share/hiv/data/prevalence_surveys/GBD2019_prevalence_surveys_decomp4_FORUSE.csv', 
-          to = paste0("/ihme/hiv/epp_input/gbd19/", run.name, "/prev_surveys.csv"))
+file.copy(from = '/share/hiv/data/prevalence_surveys/GBD2019_prevalence_surveys_decomp4_FORUSE.csv', to = paste0("/ihme/hiv/epp_input/gbd19/", run.name, "/prev_surveys.csv"))
 
 # Prepare ART proportions
 if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
@@ -154,14 +153,16 @@ system(paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:10:00 -q all.q -P "
 done.locs <- gsub("_under1_splits.csv","",list.files(paste0("/ihme/hiv/epp_output/gbd19/",run.name,"/compiled/"),pattern="_under1_splits.csv"))
 setdiff(loc.table[grepl("1",group) & spectrum==1,ihme_loc_id],done.locs)
 
+check_loc_results(loc.table[grepl("1",group) & spectrum==1,ihme_loc_id],paste0('/share/hiv/epp_output/gbd19/', run.name, '/compiled/'),prefix="",postfix=".csv")
+
 ##Create all plots
 # # ## Create aggregate and age-specific plots
 for(loc in done.locs){
   
-  if(loc %in% loc.table[grepl("IND",ihme_loc_id) & epp != 1,ihme_loc_id]){
-    compare.run <- NA
-  }
-  
+  # if(loc %in% loc.table[grepl("IND",ihme_loc_id) & epp != 1,ihme_loc_id]){
+  #   compare.run <- NA
+  # }
+  # 
 plot.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:15:00 -l archive -q all.q -P ", cluster.project, " ",
                       "-e /share/temp/sgeoutput/", user, "/errors ",
                       "-o /share/temp/sgeoutput/", user, "/output ",
@@ -175,16 +176,16 @@ system(plot.string)
 
 
 ## Prep for reckoning
-prep.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:20:00 -l archive -q all.q -P ", cluster.project, " ",
-                     "-e /share/temp/sgeoutput/", user, "/errors ",
-                     "-o /share/temp/sgeoutput/", user, "/output ",
-                     "-N ", loc, "_apply_age_splits ",
-                     "-hold_jid ", loc,"_save_draws ",
-                     code.dir, "gbd/singR_shell.sh ",
-                     code.dir, "gbd/apply_age_splits.R ",
-                     loc, " ", run.name, " ", run.name)
-print(prep.string)
-system(prep.string)
+# prep.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:20:00 -l archive -q all.q -P ", cluster.project, " ",
+#                      "-e /share/temp/sgeoutput/", user, "/errors ",
+#                      "-o /share/temp/sgeoutput/", user, "/output ",
+#                      "-N ", loc, "_apply_age_splits ",
+#                      "-hold_jid ", loc,"_save_draws ",
+#                      code.dir, "gbd/singR_shell.sh ",
+#                      code.dir, "gbd/apply_age_splits.R ",
+#                      loc, " ", run.name, " ", run.name)
+# print(prep.string)
+# system(prep.string)
 
 
 

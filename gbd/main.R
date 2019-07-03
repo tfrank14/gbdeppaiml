@@ -19,8 +19,8 @@ if(length(args) > 0) {
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
   paediatric <- as.logical(args[4])
 } else {
-	run.name <- "190629_decomp4_newprev"
-	loc <- "NGA_25332"
+	run.name <- "190629_decomp4_newart"
+	loc <- "KEN_35617"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- TRUE
@@ -74,8 +74,7 @@ if(geoadjust & !loc %in% no_geo_adj){
 
 ### Code
 ## Read in spectrum object, sub in GBD parameters
-dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, 
-                       pop.sub, anc.sub, anc.backcast, prev.sub, art.sub, sexincrr.sub, popadjust, age.prev, paediatric, anc.rt, geoadjust)
+dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, pop.sub, anc.sub, anc.backcast, prev.sub, art.sub, sexincrr.sub, popadjust, age.prev, paediatric, anc.rt, geoadjust)
 
 if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 
