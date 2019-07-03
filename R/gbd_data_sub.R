@@ -1034,6 +1034,7 @@ sub.anc <- function(loc, dt, i, uncertainty) {
       }))
       art.dt <- rbind(art.dt, add.dt)
     }
+    art.dt <- unique(art.dt)
     attr(dt,"specfp")$art15plus_isperc[attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$sex=="Male"] <- art.dt[year %in% years & sex == 1, type]
     attr(dt,"specfp")$art15plus_isperc[attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$sex=="Female"] <- art.dt[year %in% years & sex == 2, type]
     
