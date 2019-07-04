@@ -13,10 +13,10 @@ library(data.table)
 
 ## Arguments
 
-run.name <- "190629_decomp4_paedsart"
+run.name <- "190630_rhino"
 compare.run <- "190629_decomp4_newprev"
 proj.end <- 2019
-n.draws <- 1
+n.draws <- 1000
 run.group2 <- FALSE
 paediatric <- TRUE
 cluster.project <- "proj_hiv"
@@ -89,7 +89,8 @@ if(!file.exists(paste0(input.dir, "population/"))) {
 ## It should, because I updated our supplemental survey data set, but worth double-checking to make sure all location-years are there
 ## Also, we should decide what subnationals we want to use age, sex-specific data in; 
 ## Currently just using 15-49 data in Kenya counties due to small n
-file.copy(from = '/share/hiv/data/prevalence_surveys/GBD2019_prevalence_surveys_decomp4_FORUSE.csv', to = paste0("/ihme/hiv/epp_input/gbd19/", run.name, "/prev_surveys.csv"))
+file.copy(from = '/share/hiv/data/prevalence_surveys/GBD2019_prevalence_surveys_decomp4_FORUSE.csv', 
+          to = paste0("/ihme/hiv/epp_input/gbd19/", run.name, "/prev_surveys.csv"))
 
 # Prepare ART proportions
 if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
@@ -105,6 +106,9 @@ if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
 
 
 ## Launch EPP
+n.draws <- 1000
+
+  
 for(loc in loc.list) {    ## Run EPPASM
 
     epp.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=12:00:00 -l archive -q all.q -P ", cluster.project, " ",
@@ -141,7 +145,7 @@ check_loc_results(loc.list,paste0('/share/hiv/epp_output/gbd19/', run.name, '/co
 # 
 
 # ## Split India states to Urban Rural and generate values for Territories
-system(paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:10:00 -q all.q -P ", cluster.project, " ",
+system(paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:10:00 -l archive -q all.q -P ", cluster.project, " ",
                "-e /share/temp/sgeoutput/", user, "/errors ",
                "-o /share/temp/sgeoutput/", user, "/output ",
                "-N ", "india_split ",
@@ -177,16 +181,16 @@ system(plot.string)
 
 
 ## Prep for reckoning
-# prep.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:20:00 -l archive -q all.q -P ", cluster.project, " ",
-#                      "-e /share/temp/sgeoutput/", user, "/errors ",
-#                      "-o /share/temp/sgeoutput/", user, "/output ",
-#                      "-N ", loc, "_apply_age_splits ",
-#                      "-hold_jid ", loc,"_save_draws ",
-#                      code.dir, "gbd/singR_shell.sh ",
-#                      code.dir, "gbd/apply_age_splits.R ",
-#                      loc, " ", run.name, " ", run.name)
-# print(prep.string)
-# system(prep.string)
+prep.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:20:00 -l archive -q all.q -P ", cluster.project, " ",
+                     "-e /share/temp/sgeoutput/", user, "/errors ",
+                     "-o /share/temp/sgeoutput/", user, "/output ",
+                     "-N ", loc, "_apply_age_splits ",
+                     "-hold_jid ", loc,"_save_draws ",
+                     code.dir, "gbd/singR_shell.sh ",
+                     code.dir, "gbd/apply_age_splits.R ",
+                     loc, " ", run.name, " ", run.name)
+print(prep.string)
+system(prep.string)
 
 
 

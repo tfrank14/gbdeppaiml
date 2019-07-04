@@ -22,7 +22,7 @@ args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
   run.name <- args[1]
 } else {
-  run.name <- "190626_georatios_test_thresh_nohighrisk"
+  run.name <- "190629_decomp4_paedsart"
 }
 
 
@@ -33,10 +33,7 @@ prop.path <- paste0('/share/hiv/epp_input/gbd19/art_prop.csv')
 pop.dir <- list(paste0('/share/hiv/epp_input/gbd19/',run.name,"/population_single_age/"),
                 paste0('/share/hiv/epp_input/gbd19/',run.name,"/population_single_age/india_splitting_locs/"))
 
-spec.inc.path <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/compiled/IND_inc/')
-spec.prev.path <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/compiled/IND_prev/')
-dir.create(spec.inc.path, showWarnings = F)
-dir.create(spec.prev.path, showWarnings = F)
+
 ### Functions
 library(mortdb, lib = "/ihme/mortality/shared/r")
 
@@ -69,10 +66,16 @@ nat.rural15 <- 0.17
 
 ### Code
 ## Create minor territories
-file.list <- list.files(dir.list, "IND")
+file.list <- list.files(dir.list, "IND_")
 locs <- gsub(".csv", "", file.list)
 ind.locs <- loc.table[grepl("IND", ihme_loc_id) & level == 4, ihme_loc_id]
 missing.locs <- setdiff(ind.locs, locs)
+
+spec.inc.path <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/compiled/IND_inc/')
+spec.prev.path <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/compiled/IND_prev/')
+dir.create(spec.inc.path, showWarnings = F)
+dir.create(spec.prev.path, showWarnings = F)
+
 
 ##Sum counts across populations
 all.ind <- rbindlist(lapply(locs[nchar(locs) == 8], function(loc_i) {

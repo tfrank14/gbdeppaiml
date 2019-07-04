@@ -327,6 +327,7 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
     art <- rbind(art, backfill, use.names = T)
   }
   art <- art[order(year)]
+  art[is.na(art)] <- 0
   art[,art_isperc := ifelse(ART_cov_pct > 0, TRUE, FALSE)]
   art[,cotrim_isperc := ifelse(Cotrim_cov_pct > 0, TRUE, FALSE)]
   artpaed <- ifelse(art$art_isperc, art[,ART_cov_pct], art[,ART_cov_num])
@@ -1030,6 +1031,7 @@ sub.anc <- function(loc, dt, i, uncertainty) {
       }))
       art.dt <- rbind(art.dt, add.dt)
     }
+    
     art.dt <- unique(art.dt)
     attr(dt,"specfp")$art15plus_isperc[attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$sex=="Male"] <- art.dt[year %in% years & sex == 1, type]
     attr(dt,"specfp")$art15plus_isperc[attr(attr(dt,"specfp")$art15plus_isperc,"dimnames")$sex=="Female"] <- art.dt[year %in% years & sex == 2, type]

@@ -20,7 +20,7 @@ if(length(args) > 0) {
   paediatric <- as.logical(args[4])
 } else {
 	run.name <- "190629_decomp4_paedsart"
-	loc <- "GNQ"
+	loc <- "BFA"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- TRUE
@@ -103,10 +103,10 @@ if(grepl("IND",loc)){
 
 
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0 = 1e3, B = 1e2, number_k = 100)
+fit <- fitmod(dt, eppmod = epp.mod, B0 = 1e3, B = 1e3, number_k = 250)
 
 data.path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
-if(!file.exists(data.path)){
+if(i==1){
   save_data(loc, attr(dt, 'eppd'), run.name)
 }
 
