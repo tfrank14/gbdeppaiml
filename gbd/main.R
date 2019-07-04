@@ -20,7 +20,7 @@ if(length(args) > 0) {
   paediatric <- as.logical(args[4])
 } else {
 	run.name <- "190629_decomp4_paedsart"
-	loc <- "SEN"
+	loc <- "UGA"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- TRUE
@@ -79,7 +79,7 @@ dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, pop.sub,
 if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 
 if(grepl('NGA', loc)){
-  temp = readRDS('/ihme/homes/tahvif/MWI_dt.rds')
+  temp <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped_subpop/MWI.rds'))
   temp.frr <- attr(temp, 'specfp')$frr_cd4
   temp.frr.art <- attr(temp, 'specfp')$frr_art
   attr(dt, 'specfp')$frr_cd4 <- temp.frr
@@ -88,6 +88,13 @@ if(grepl('NGA', loc)){
   temp[temp < 0] <- 0
   attr(dt, 'specfp')$paedsurv_artcd4dist <- temp
 }
+## Replace on-ART mortality RR for TZA and UGA
+if(loc %in% c('UGA', 'TZA')){
+  temp <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped_subpop/MWI.rds'))
+  temp.artmxrr <- attr(temp, 'specfp')$artmx_timerr
+  attr(dt, 'specfp')$artmx_timerr <- temp.artmxrr
+}
+
 ## TODO - fix ancsitedat in BEN, MOZ, ZWE, ZMB, TGO, SEN, MDG, NER, NAM, GMB, GHA, SLE, CIV
 attr(dt, 'eppd')$ancsitedat = unique(attr(dt, 'eppd')$ancsitedat)
 ## TODO - fix se = 0 data points in ZAF
@@ -98,10 +105,12 @@ attr(dt, 'specfp')$relinfectART <- 0.3
 if(grepl("IND",loc)){
   attr(dt, 'specfp')$art_alloc_mxweight <- 0.5
 }
-
+if(grepl('MDG', loc)){
+  attr(dt, 'eppd')$anc.used <- attr(dt, 'eppd')$anc.used[grepl('feminine', names(attr(dt, 'eppd')$anc.used))]
+}
 
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0 = 1e3, B = 1e2, number_k = 100)
+fit <- fitmod(dt, eppmod = epp.mod, B0 = 1e3, B = 1e2, number_k = 10)
 
 data.path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
 if(!file.exists(data.path)){
