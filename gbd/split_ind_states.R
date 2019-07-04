@@ -33,6 +33,10 @@ prop.path <- paste0('/share/hiv/epp_input/gbd19/art_prop.csv')
 pop.dir <- list(paste0('/share/hiv/epp_input/gbd19/',run.name,"/population_single_age/"),
                  paste0('/share/hiv/epp_input/gbd19/',run.name,"/population_single_age/india_splitting_locs/"))
 
+spec.inc.path <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/compiled/IND_inc/')
+spec.prev.path <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/compiled/IND_prev/')
+dir.create(spec.inc.path, showWarnings = F)
+dir.create(spec.prev.path, showWarnings = F)
 ### Functions
 library(mortdb, lib = "/ihme/mortality/shared/r")
 
@@ -234,7 +238,26 @@ for(state in state.locs) {
       }
    
     write.csv(child.result, paste0(dir, child ,".csv"), row.names = F)
-      
+    
+    ## Write out 15-49 incidence and prevalence to input to Spectrum
+    spec.dt <- child.result[age %in% 15:49, .(age, sex, year, run_num, pop_neg, new_hiv, pop)]
+    spec.dt <- spec.dt[,.(new_hiv = sum(new_hiv), pop_neg = sum(pop_neg), pop = sum(pop)), by = c('year', 'run_num')]
+    spec.dt[, inc := ifelse(pop_neg == 0, 0, new_hiv/pop_neg)]
+    spec.dt[, prev := ifelse(pop == 0, 0, (pop - pop_neg)/pop)]
+    inc.dt <- spec.dt[,.(year, run_num, inc)]
+    inc.dt[,inc:=inc*100]
+    inc.dt <- dcast.data.table(inc.dt,year~run_num, value.var='inc')
+    setnames(inc.dt, names(inc.dt)[!names(inc.dt) == 'year'], paste0('draw', names(inc.dt)[!names(inc.dt) == 'year']))
+    inc.dt <- inc.dt[order(year),]
+    write.csv(inc.dt, paste0(spec.inc.path, child, '.csv'), row.names = F)
+    
+    prev.dt <- spec.dt[,.(year, run_num, prev)]
+    prev.dt[,prev:=prev*100]
+    prev.dt <- dcast.data.table(prev.dt,year~run_num, value.var='prev')
+    setnames(prev.dt, names(prev.dt)[!names(prev.dt) == 'year'], paste0('draw', names(prev.dt)[!names(prev.dt) == 'year']))
+    prev.dt <- prev.dt[order(year),]
+    write.csv(prev.dt, paste0(spec.prev.path, child, '.csv'), row.names = F)
+    
     
     ##Under 1 splits
     path <- paste0(dir, state,"_under1_splits.csv")
