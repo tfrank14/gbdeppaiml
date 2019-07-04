@@ -14,7 +14,7 @@ print(args)
 if(length(args) > 0) {
   loc <- args[1]
 } else {
-  loc <- "NGA_25325"
+  loc <- "SDN"
 
 }
 ### Functions
@@ -23,7 +23,6 @@ setwd(paste0(ifelse(windows, "H:", paste0("/ihme/homes/", user)), "/eppasm/"))
 devtools::load_all()
 setwd(code.dir)
 devtools::load_all()
-
 
 ### Tables
 loc.table <- data.table(get_locations(hiv_metadata = T))
@@ -38,7 +37,14 @@ if(grepl('1', loc.table[ihme_loc_id == loc, group])){
   val <- prepare_spec_object_group2(loc)
 }
 
-saveRDS(val, paste0('/share/hiv/data/PJNZ_EPPASM_prepped_subpop/', loc, '.rds'))
+dtx <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped/', loc, '.rds'))
+anc.old <- attr(dtx,"eppd")$ancsitedat
+
+if(length(unique(anc.old$site)) > length(unique(attr(val,"eppd")$ancsitedat)$site)){
+  stop()
+} else {
+  saveRDS(val, paste0('/share/hiv/data/PJNZ_EPPASM_prepped_subpop/', loc, '.rds'))
+}
 
 
 
