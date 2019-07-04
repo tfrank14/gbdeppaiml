@@ -20,7 +20,7 @@ if(length(args) > 0) {
   paediatric <- as.logical(args[4])
 } else {
 	run.name <- "190629_decomp4_paedsart"
-	loc <- "SEN"
+	loc <- "GNQ"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- TRUE
@@ -61,7 +61,7 @@ devtools::load_all()
 loc.table <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/location_table.csv'))
 
 # These locations do not have information from LBD team estimates
-no_geo_adj <-  c(loc.table[epp ==1 & grepl("IND",ihme_loc_id),ihme_loc_id],"PNG","HTI","DOM", "CPV","GNQ",loc.table[epp ==1 & grepl("ZAF",ihme_loc_id),ihme_loc_id])
+no_geo_adj <-  c(loc.table[epp ==1 & grepl("IND",ihme_loc_id),ihme_loc_id],"PNG","HTI","DOM", loc.table[epp ==1 & grepl("ZAF",ihme_loc_id),ihme_loc_id])
 
 # ANC data
 if(geoadjust & !loc %in% no_geo_adj){
@@ -75,6 +75,8 @@ if(geoadjust & !loc %in% no_geo_adj){
 ### Code
 ## Read in spectrum object, sub in GBD parameters
 dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, pop.sub, anc.sub, anc.backcast, prev.sub, art.sub, sexincrr.sub, popadjust, age.prev, paediatric, anc.rt, geoadjust)
+
+
 
 if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 
