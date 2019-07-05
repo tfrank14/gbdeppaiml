@@ -112,7 +112,7 @@ if(grepl('MDG', loc)){
 }
 
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0 = 1e5, B = 1e3, number_k = 250)
+fit <- fitmod(dt, eppmod = epp.mod, B0 = 1e5, B = 1e3, number_k = 500)
 
 data.path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
 if(i==1){

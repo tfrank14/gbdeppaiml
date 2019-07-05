@@ -13,7 +13,7 @@ library(data.table)
 
 ## Arguments
 
-run.name <- "190630_rhino"
+run.name <- "190630_rhino2"
 compare.run <- "190629_decomp4_newprev"
 proj.end <- 2019
 n.draws <- 1000
@@ -124,7 +124,7 @@ for(loc in loc.list) {    ## Run EPPASM
     system(epp.string)
 
     # # ## Draw compilation
-     draw.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:10:00 -q all.q -P ", cluster.project, " ",
+     draw.string <- paste0("qsub -l m_mem_free=30G -l fthread=1 -l h_rt=00:10:00 -q all.q -P ", cluster.project, " ",
                           "-e /share/temp/sgeoutput/", user, "/errors ",
                            "-o /share/temp/sgeoutput/", user, "/output ",
                            "-N ", loc, "_save_draws ",
@@ -134,6 +134,31 @@ for(loc in loc.list) {    ## Run EPPASM
                            run.name, " ", loc, ' ', n.draws, ' TRUE ', paediatric)
      print(draw.string)
      system(draw.string)
+     
+     plot.string <- paste0("qsub -l m_mem_free=8G -l fthread=1 -l h_rt=00:15:00 -l archive -q all.q -P ", cluster.project, " ",
+                           "-e /share/temp/sgeoutput/", user, "/errors ",
+                           "-o /share/temp/sgeoutput/", user, "/output ",
+                           "-N ", loc, "_plot_eppasm ",
+                           "-hold_jid ", loc, "_save_draws ",
+                           code.dir, "gbd/singR_shell.sh ",
+                           code.dir, "gbd/main_plot_output.R ",
+                           loc, " ", run.name, ' ', paediatric, ' ', compare.run)
+     print(plot.string)
+     system(plot.string)
+     
+     ## Prep for reckoning
+     prep.string <- paste0("qsub -l m_mem_free=20G -l fthread=1 -l h_rt=00:20:00 -l archive -q all.q -P ", cluster.project, " ",
+                           "-e /share/temp/sgeoutput/", user, "/errors ",
+                           "-o /share/temp/sgeoutput/", user, "/output ",
+                           "-N ", loc, "_apply_age_splits ",
+                           "-hold_jid ", loc,"_save_draws ",
+                           code.dir, "gbd/singR_shell.sh ",
+                           code.dir, "gbd/apply_age_splits.R ",
+                           loc, " ", run.name, " ", "190630_rhino")
+     print(prep.string)
+     system(prep.string)
+     
+     
 
 
 }
@@ -164,20 +189,21 @@ check_loc_results(loc.table[grepl("1",group) & spectrum==1,ihme_loc_id],paste0('
 # # ## Create aggregate and age-specific plots
 for(loc in done.locs){
   
-  # if(loc %in% loc.table[grepl("IND",ihme_loc_id) & epp != 1,ihme_loc_id]){
-  #   compare.run <- NA
-  # }
-  # 
-plot.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:15:00 -l archive -q all.q -P ", cluster.project, " ",
-                      "-e /share/temp/sgeoutput/", user, "/errors ",
-                      "-o /share/temp/sgeoutput/", user, "/output ",
-                      "-N ", loc, "_plot_eppasm ",
-                      "-hold_jid ", loc, "_save_draws ",
-                      code.dir, "gbd/singR_shell.sh ",
-                      code.dir, "gbd/main_plot_output.R ",
-                      loc, " ", run.name, ' ', paediatric, ' ', compare.run)
-print(plot.string)
-system(plot.string)
+  if(loc %in% loc.table[grepl("IND",ihme_loc_id) & epp != 1,ihme_loc_id]){
+  
+ 
+    plot.string <- paste0("qsub -l m_mem_free=8G -l fthread=1 -l h_rt=00:15:00 -l archive -q all.q -P ", cluster.project, " ",
+                          "-e /share/temp/sgeoutput/", user, "/errors ",
+                          "-o /share/temp/sgeoutput/", user, "/output ",
+                          "-N ", loc, "_plot_eppasm ",
+                          "-hold_jid ", loc, "_save_draws ",
+                          code.dir, "gbd/singR_shell.sh ",
+                          code.dir, "gbd/main_plot_output.R ",
+                          loc, " ", run.name, ' ', paediatric, ' ', compare.run)
+    print(plot.string)
+    system(plot.string)
+
+  }
 
 
 ## Prep for reckoning
