@@ -62,6 +62,9 @@ find_pjnz <- function(loc){
   if(length(file.list) == 0) {
     loc.name <- loc.table[ihme_loc_id == temp.loc, location_name]
     file.list <-  pjnz.list[which(grepl(paste0(loc.name,"_"), pjnz.list))]
+    if(loc.name == 'Sudan'){
+      file.list <- file.list[!grepl('South', file.list)]
+    }
 
     if(length(file.list) == 0) {
       file.list <- grep(loc.name, pjnz.list, value = T)

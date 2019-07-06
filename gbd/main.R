@@ -20,7 +20,7 @@ if(length(args) > 0) {
   paediatric <- as.logical(args[4])
 } else {
 	run.name <- "190629_decomp4_paedsart"
-	loc <- "BFA"
+	loc <- "MDG"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- TRUE
@@ -109,16 +109,24 @@ if(grepl("IND",loc)){
 }
 if(grepl('MDG', loc)){
   attr(dt, 'eppd')$anc.used <- attr(dt, 'eppd')$anc.used[grepl('feminine', names(attr(dt, 'eppd')$anc.used))]
+  eppd <- attr(dt, 'eppd')
+  eppd$ancsitedat <- eppd$ancsitedat[eppd$ancsitedat$subpop == 'population feminine restante',]
+  eppd$anc.prev <- eppd$anc.prev[grepl('%', rownames(eppd$anc.prev)),]
+  zero.prev <- rownames(eppd$anc.prev)[rowSums(eppd$anc.prev, na.rm = T) == 0]
+  eppd$anc.prev <- eppd$anc.prev[!rownames(eppd$anc.prev) %in% zero.prev,]
+  eppd$anc.used <- eppd$anc.used[!names(eppd$anc.used) %in% paste0('population feminine restante.', zero.prev)]
+  eppd$anc.prev <- eppd$anc.prev[rownames(eppd$anc.prev) %in% gsub('population feminine restante.', '', names(eppd$anc.used)),]
+  eppd$ancsitedat <- eppd$ancsitedat[eppd$ancsitedat$site %in% rownames(eppd$anc.prev),]
 }
 
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0 = 1e5, B = 1e3, number_k = 250)
+fit <- fitmod(dt, eppmod = epp.mod, B0 = 1e5, B = 1e3, number_k = 500)
+
 
 data.path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
-if(i==1){
+if(!file.exists(data.path)){
   save_data(loc, attr(dt, 'eppd'), run.name)
 }
-
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)
 ## through the end of the projection period.
