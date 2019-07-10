@@ -614,10 +614,10 @@ add_frr_noage_fp <- function(obj){
   frr_beta_art_age <- frr_art_age$est * frr_beta_country
   
   ## Construct FRR parameter inputs
-  frr_cd4 <- array(NA, c(7, 8, 52))
+  frr_cd4 <- array(NA, c(7, 8, length(start.year:stop.year)))
   frr_cd4[] <- outer(frr_beta_cd4, c(frr_15to19, frr_15to19, frr_beta_age[2:7]), "*")
   
-  frr_art <- array(NA, c(3, 7, 8, 52))
+  frr_art <- array(NA, c(3, 7, 8, length(start.year:stop.year)))
   frr_art[1,,,] <- frr_cd4
   frr_art[2:3,,,] <- rep(frr_beta_art_age[c(1, 1:7)], each = 2*7)
   
