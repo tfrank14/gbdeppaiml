@@ -38,6 +38,7 @@ loc.table <- data.table(get_locations(hiv_metadata = T))
 epp.list <- sort(loc.table[epp == 1 & grepl('1', group), ihme_loc_id])
 loc.list <- epp.list
 
+
 #Make comparison ART plots
 if(!file.exists(paste0(input.dir, "/art_plots.pdf"))) {
 for(loc in loc.list) { 
@@ -106,22 +107,19 @@ if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
 
 
 ## Launch EPP
-n.draws <- 1000
-
-  
 for(loc in loc.list) {    ## Run EPPASM
 
-    epp.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=12:00:00 -l archive -q all.q -P ", cluster.project, " ",
-                         "-e /share/temp/sgeoutput/", user, "/errors ",
-                         "-o /share/temp/sgeoutput/", user, "/output ",
-                         "-N ", loc, "_eppasm ",
-                         "-t 1:", n.draws, " ",
-                         "-hold_jid eppasm_prep_inputs_", run.name," ",
-                         code.dir, "gbd/singR_shell.sh ",
-                         code.dir, "gbd/main.R ",
-                         run.name, " ", loc, " ", proj.end, " ", paediatric)
-    print(epp.string)
-    system(epp.string)
+      epp.string <- paste0("qsub -l m_mem_free=7G -l fthread=1 -l h_rt=24:00:00 -l archive -q all.q -P ", cluster.project, " ",
+                           "-e /share/temp/sgeoutput/", user, "/errors ",
+                           "-o /share/temp/sgeoutput/", user, "/output ",
+                           "-N ", loc, "_eppasm ",
+                           "-t 1:", n.draws, " ",
+                           "-hold_jid eppasm_prep_inputs_", run.name," ",
+                           code.dir, "gbd/singR_shell.sh ",
+                           code.dir, "gbd/main.R ",
+                           run.name, " ", loc, " ", proj.end, " ", paediatric)
+      print(epp.string)
+      system(epp.string)
 
     # # ## Draw compilation
      draw.string <- paste0("qsub -l m_mem_free=30G -l fthread=1 -l h_rt=00:10:00 -q all.q -P ", cluster.project, " ",
@@ -134,8 +132,9 @@ for(loc in loc.list) {    ## Run EPPASM
                            run.name, " ", loc, ' ', n.draws, ' TRUE ', paediatric)
      print(draw.string)
      system(draw.string)
+    
      
-     plot.string <- paste0("qsub -l m_mem_free=8G -l fthread=1 -l h_rt=00:15:00 -l archive -q all.q -P ", cluster.project, " ",
+     plot.string <- paste0("qsub -l m_mem_free=11G -l fthread=1 -l h_rt=00:15:00 -l archive -q all.q -P ", cluster.project, " ",
                            "-e /share/temp/sgeoutput/", user, "/errors ",
                            "-o /share/temp/sgeoutput/", user, "/output ",
                            "-N ", loc, "_plot_eppasm ",
@@ -147,7 +146,7 @@ for(loc in loc.list) {    ## Run EPPASM
      system(plot.string)
      
      ## Prep for reckoning
-     prep.string <- paste0("qsub -l m_mem_free=20G -l fthread=1 -l h_rt=00:20:00 -l archive -q all.q -P ", cluster.project, " ",
+     prep.string <- paste0("qsub -l m_mem_free=30G -l fthread=1 -l h_rt=02:00:00 -l archive -q all.q -P ", cluster.project, " ",
                            "-e /share/temp/sgeoutput/", user, "/errors ",
                            "-o /share/temp/sgeoutput/", user, "/output ",
                            "-N ", loc, "_apply_age_splits ",
@@ -237,9 +236,23 @@ system(prep.string)
 
 
  
+#Move over India  inputs for spectrum
+ind.locs <- loc.table[grepl("IND",ihme_loc_id) & spectrum==1,ihme_loc_id]
+inputs <- names(subset.inputs)[!names(subset.inputs) %in% c("migration","population","ASFR","TFR","SRB","incidence","prevalence")]
+for(input.x in inputs){
+  for(loc_i in ind.locs){
+file.copy(from = paste0('/share/hiv/spectrum_input/190610_piranha/',input.x,"/",loc_i,".csv"), 
+            to = paste0('/share/hiv/spectrum_input/190630_rhino/',input.x,"/",loc_i,".csv") )
+  }
+}
 
-
-  
+inputs <- list(inc="incidence",prev="prevalence")
+for(input.x in names(inputs)){
+  for(loc_i in ind.locs){
+    file.copy(from = paste0('/ihme/hiv/epp_output/gbd19/',run.name,'/compiled/IND_',input.x,"/",loc_i,".csv"), 
+              to = paste0('/share/hiv/spectrum_input/190630_rhino/',inputs[input.x],"/",loc_i,".csv") )
+  }
+}
   
   
   

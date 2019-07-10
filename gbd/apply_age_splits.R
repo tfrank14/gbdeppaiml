@@ -13,8 +13,8 @@ if(length(args) > 0) {
   spec.name <- args[3]
 } else {
   loc <- "MWI"
-  run.name <- "190613_quetzal"
-  spec.name <- "190613_quetzal"
+  run.name <- "190630_rhino2"
+  spec.name <- "190630_rhino"
 }
 fill.draw <- T
 fill.na <- T
@@ -110,7 +110,7 @@ spec_draw[, suscept_pop := pop_neg]
 
 
 ## Calculate birth prevalence rate
-birth_pop <- get_population(age_group_id=164, location_id=loc_id, year_id=1970:2019, sex_id=1:2, gbd_round_id = 6, decomp_step = 'step2')
+birth_pop <- get_population(age_group_id=164, location_id=loc_id, year_id=1970:2019, sex_id=1:2, gbd_round_id = 6, decomp_step = 'step4')
 setnames(birth_pop, c("year_id", "population"), c("year", "gbd_pop"))
 birth_dt <- copy(spec_draw)
 birth_dt <- birth_dt[,.(age_group_id = 164, birth_prev = sum(birth_prev), total_births = sum(total_births)), by = c('year', 'run_num', 'sex_id')]
@@ -203,6 +203,10 @@ convert_vars <- c('non_hiv_deaths', 'hiv_deaths', 'new_hiv', 'hiv_births', 'tota
 spec_combined[,(convert_vars) := lapply(.SD,shift_to_midyear),.SDcols=convert_vars, by=c("sex_id", "run_num", "age_group_id")] 
 spec_combined[,(convert_vars) := lapply(.SD,convert_to_rate),.SDcols=convert_vars] 
 print(head(spec_combined))
+
+convert_vars2 <- c("suscept_pop","pop_neg","pop_lt200","pop_200to350","pop_gt350","pop_art")
+spec_combined[,(convert_vars2) := lapply(.SD,convert_to_rate),.SDcols=convert_vars2] 
+print(spec_combined)
 
 
 ##################################################################################################################

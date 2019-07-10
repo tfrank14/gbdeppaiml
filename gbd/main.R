@@ -19,7 +19,7 @@ if(length(args) > 0) {
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
   paediatric <- as.logical(args[4])
 } else {
-	run.name <- "190629_decomp4_paedsart"
+	run.name <- "190630_rhino2"
 	loc <- "MDG"
 	stop.year <- 2019
 	i <- 1
@@ -77,11 +77,13 @@ if(geoadjust & !loc %in% no_geo_adj){
 dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, pop.sub, anc.sub, anc.backcast, prev.sub, art.sub, sexincrr.sub, popadjust, age.prev, paediatric, anc.rt, geoadjust)
 
 
-
 if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 
 if(grepl('NGA', loc)){
   temp <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped_subpop/MWI.rds'))
+  specfp <- sub.pop.params.specfp(attr(temp, 'specfp'), loc, i)
+  specfp <- update_spectrum_fixpar(specfp, proj_start = start.year, proj_end = stop.year,time_epi_start = specfp$ss$time_epi_start, popadjust=popadjust)
+  attr(temp, 'specfp') <- specfp
   temp.frr <- attr(temp, 'specfp')$frr_cd4
   temp.frr.art <- attr(temp, 'specfp')$frr_art
   attr(dt, 'specfp')$frr_cd4 <- temp.frr
@@ -90,6 +92,7 @@ if(grepl('NGA', loc)){
   temp[temp < 0] <- 0
   attr(dt, 'specfp')$paedsurv_artcd4dist <- temp
 }
+
 ## Replace on-ART mortality RR for TZA and UGA
 if(loc %in% c('UGA', 'TZA')){
   temp <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped_subpop/MWI.rds'))
@@ -107,6 +110,7 @@ attr(dt, 'specfp')$relinfectART <- 0.3
 if(grepl("IND",loc)){
   attr(dt, 'specfp')$art_alloc_mxweight <- 0.5
 }
+
 if(grepl('MDG', loc)){
   attr(dt, 'eppd')$anc.used <- attr(dt, 'eppd')$anc.used[grepl('feminine', names(attr(dt, 'eppd')$anc.used))]
   eppd <- attr(dt, 'eppd')
