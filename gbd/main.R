@@ -20,7 +20,7 @@ if(length(args) > 0) {
   paediatric <- as.logical(args[4])
 } else {
 	run.name <- "190629_decomp4_paedsart"
-	loc <- "MDG"
+	loc <- "MWI"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- TRUE
@@ -81,11 +81,6 @@ dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, pop.sub,
 if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 
 if(grepl('NGA', loc)){
-  temp <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped_subpop/MWI.rds'))
-  temp.frr <- attr(temp, 'specfp')$frr_cd4
-  temp.frr.art <- attr(temp, 'specfp')$frr_art
-  attr(dt, 'specfp')$frr_cd4 <- temp.frr
-  attr(dt, 'specfp')$frr_art <- temp.frr.art
   temp <- attr(dt, 'specfp')$paedsurv_artcd4dist
   temp[temp < 0] <- 0
   attr(dt, 'specfp')$paedsurv_artcd4dist <- temp
