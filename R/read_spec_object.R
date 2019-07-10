@@ -7,7 +7,7 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
   
   
   #Do this for now as something is weird with the new PJNZ files - don't need subpop anyway
-  if(grepl("ZAF",loc) | grepl("IND",loc)){
+  if(grepl("ZAF",loc) | grepl("IND",loc) | grepl("SDN",loc)){
     dt <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped/', loc, '.rds'))
   } else {
     dt <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped_subpop/', loc, '.rds'))

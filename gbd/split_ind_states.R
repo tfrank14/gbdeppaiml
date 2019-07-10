@@ -22,7 +22,7 @@ args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
   run.name <- args[1]
 } else {
-  run.name <- "190629_decomp4_paedsart"
+  run.name <- "190630_rhino2"
 }
 
 
@@ -51,6 +51,7 @@ sex_groups <- get_ids("sex")
 sex_groups$sex <- tolower(sex_groups$sex)
 
 prop.dt <- fread(prop.path)[grepl("IND", ihme_loc_id)]
+pops <- paste0("/ihme/hiv/epp_input/gbd19/",run.name,"/population_single_age/")
 
 
 
@@ -71,14 +72,16 @@ locs <- gsub(".csv", "", file.list)
 ind.locs <- loc.table[grepl("IND", ihme_loc_id) & level == 4, ihme_loc_id]
 missing.locs <- setdiff(ind.locs, locs)
 
+
 spec.inc.path <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/compiled/IND_inc/')
 spec.prev.path <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, '/compiled/IND_prev/')
 dir.create(spec.inc.path, showWarnings = F)
 dir.create(spec.prev.path, showWarnings = F)
 
+ind.locs.epp <- loc.table[grepl("IND",ihme_loc_id) & epp==1,ihme_loc_id]
 
 ##Sum counts across populations
-all.ind <- rbindlist(lapply(locs[nchar(locs) == 8], function(loc_i) {
+all.ind <- rbindlist(lapply(ind.locs.epp , function(loc_i) {
   sum.dt <- fread(paste0(dir.list,loc_i,".csv"))
   return(sum.dt)
 }))
@@ -159,7 +162,7 @@ missing.children <- setdiff(loc.table[grepl("IND", ihme_loc_id) & level == 5, ih
 missing.parents <- unique(loc.table[location_id %in% loc.table[ihme_loc_id %in% missing.children, parent_id], ihme_loc_id])
 
 state.locs <- c(loc.table[grepl("IND", ihme_loc_id) & level == 4 & epp == 1, ihme_loc_id],"IND_44538") #"IND_44538"-not run through EPP
-
+#state = state.locs[1]
 for(state in state.locs) {
   loc.id <- as.integer(strsplit(state, "_")[[1]][2])
   children <- loc.table[parent_id == loc.id, ihme_loc_id]
@@ -207,6 +210,7 @@ for(state in state.locs) {
   #Create new file for each child location, merging across measures
   for(child in children) {
     ##Find parent state path and create rate measures where necessary
+    print(child)
     dir <- dir.list
     path <- paste0(dir, state,".csv")
     state.dt <- fread(path)
@@ -218,28 +222,46 @@ for(state in state.locs) {
     child.result <- state.dt[,mget(stratum)]
     
     for(measure in measures) {
+      print(measure)
       child.id <- loc.table[ihme_loc_id == child, location_id]
-      measure <- as.character(measure) 
+      measure <- as.character(measure)
       cols <- c(stratum,measure)
-      state.dt.t <- state.dt[,mget(cols)] 
+      state.dt.t <- state.dt[,mget(cols)]
       state.dt.t$run_num <- paste0("draw", state.dt.t$run_num )
-      state.dt.t <- spread(unique(state.dt.t), run_num, get(measure)) 
-      
+      state.dt.t <- spread(unique(state.dt.t), run_num, get(measure))
+
       max.draw <- max(state.dt$run_num)
-      
-      #times the state level counts by the child ART props
+
+      #times the state level counts by the child ART props for HIV positive outcomes and 
+      #do we need child Population props for HIV negative outcomes?
       draw.cols <- paste0("draw",1:max.draw)
       child.dt <- copy(state.dt.t)
+      #if(measure %in% c("hiv_deaths","new_hiv","pop_art","hiv_births","birth_prev","pop_gt350" , "pop_200to350"  , "pop_lt200" )){
       child.dt <- child.dt[, (draw.cols) := lapply(.SD, '*',  props[ihme_loc_id == child, prop]), .SDcols = draw.cols][]
+    # } else {
+    #   pop_child <- fread(paste0(pops,"/india_splitting_locs/",child,".csv"))
+    #   pop_parent <- fread(paste0(pops,state,".csv"))
+    #   pop.ratios <- merge(unique(pop_child[,.(age_group_id,  year_id, sex_id, child_pop = population)]),
+    #         unique(pop_parent[,.(age_group_id,  year_id, sex_id, parent_pop = population)]),by=c("age_group_id","year_id","sex_id"))
+    #   pop.ratios  <- merge(pop.ratios,unique(get.age.groups),by="age_group_id")
+    #   pop.ratios <- merge(pop.ratios,sex_groups,by="sex_id")
+    #   setnames(pop.ratios ,c('year_id'), c('year'))
+    #   pop.ratios$age <- as.integer(pop.ratios$age)
+    #   pop.ratios[,pop.ratio := child_pop/parent_pop]
+    #   child.dt <- merge(child.dt,pop.ratios[,.(year,sex,age,pop.ratio)], by=c('year','sex','age'))
+    #   child.dt <- child.dt[, (draw.cols) := lapply(.SD, '*',  pop.ratio), .SDcols = draw.cols][]
+    #   child.dt <- child.dt[,pop.ratio := NULL]
+    # 
+    # }
       child.dt <- melt(child.dt,id.vars = c("age","sex","year"))
       child.dt$variable <- as.integer(gsub("draw","", child.dt$variable))
       setnames(child.dt,c("variable","value"),c("run_num",measure))
-      
+
       #Get counts for relevent measure  for child region
       child.result <- merge(child.result,child.dt)
-      
+
     }
-    
+
     write.csv(child.result, paste0(dir, child ,".csv"), row.names = F)
     
     ## Write out 15-49 incidence and prevalence to input to Spectrum
@@ -270,14 +292,14 @@ for(state in state.locs) {
     child.result <- state.dt[,mget(stratum)]
     for(measure in measures_child) {
       child.id <- loc.table[ihme_loc_id == child, location_id]
-      measure <- as.character(measure) 
+      measure <- as.character(measure)
       cols <- c(stratum,measure)
-      state.dt.t <- state.dt[,mget(cols)] 
+      state.dt.t <- state.dt[,mget(cols)]
       state.dt.t$run_num <- paste0("draw", state.dt.t$run_num )
-      state.dt.t <- spread(state.dt.t, run_num, get(measure)) 
-      
+      state.dt.t <- spread(state.dt.t, run_num, get(measure))
+
       max.draw <- max(state.dt$run_num)
-      
+
       #times the state level counts by the child ART props
       draw.cols <- paste0("draw",1:max.draw)
       child.dt <- copy(state.dt.t)
@@ -285,16 +307,17 @@ for(state in state.locs) {
       child.dt <- melt(child.dt,id.vars = c("year"))
       child.dt$variable <- as.integer(gsub("draw","", child.dt$variable))
       setnames(child.dt,c("variable","value"),c("run_num",measure))
-      
+
       #Get counts for relevent measure  for child region
       child.result <- merge(child.result,child.dt)
-      
+
     }
-    
+
     write.csv(child.result, paste0(dir, child ,"_under1_splits.csv"), row.names = F)
   }
   
 }
+
 
 
 ### End
