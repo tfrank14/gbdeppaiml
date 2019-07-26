@@ -14,12 +14,18 @@ library(data.table)
 ## Arguments
 
 run.name <- "190630_rhino2"
-compare.run <- "190629_decomp4_newprev"
+spec.name <- "190630_rhino"
+compare.run <- NA
 proj.end <- 2019
 n.draws <- 1000
 run.group2 <- FALSE
 paediatric <- TRUE
 cluster.project <- "proj_hiv"
+plot_ART <- FALSE
+est_India <- FALSE
+reckon_prep <- TRUE
+decomp.step <- "step4"
+
 
 ### Paths
 input.dir <- paste0("/ihme/hiv/epp_input/gbd19/", run.name, "/")
@@ -38,16 +44,20 @@ loc.table <- data.table(get_locations(hiv_metadata = T))
 epp.list <- sort(loc.table[epp == 1 & grepl('1', group), ihme_loc_id])
 loc.list <- epp.list
 
+#We did not use EPP-ASM for India in GBD19, instead EPP + Spectrum
+if(!est_India){
+loc.list <- loc.list[!grepl("IND",loc.list)]
+}
 
 #Make comparison ART plots
-if(!file.exists(paste0(input.dir, "/art_plots.pdf"))) {
+if(plot_ART){
 for(loc in loc.list) { 
   art.string <- paste0("qsub -l m_mem_free=1G -l fthread=1 -l h_rt=00:30:00 -l archive -q all.q -P ", cluster.project, " ",
                        "-e /share/temp/sgeoutput/", user, "/errors ",
                        "-o /share/temp/sgeoutput/", user, "/output ",
                        "-N ", loc, "_plot_art ",
                        code.dir, "gbd/singR_shell.sh ",
-                       paste0(paste0("/ihme/homes/", user), "/hiv_gbd2019/01_prep_ART_CovCaps/plot_ART.R "),
+                       paste0(paste0("/ihme/homes/", user), "/hiv_gbd2019/01_prep/plot_ART.R "),
                        "2019 ", loc, " ", "2017", " ",run.name)
   print(art.string )
   system(art.string )
@@ -70,12 +80,12 @@ if(!file.exists(paste0(input.dir, "population/"))) {
                       "-e /share/temp/sgeoutput/", user, "/errors ",
                       "-o /share/temp/sgeoutput/", user, "/output ",
                       code.dir, "gbd/singR_shell.sh ",
-                      code.dir, "gbd/gbd_prep_inputs.R"," ",run.name," ",proj.end, " ", run.group2)
+                      code.dir, "gbd/gbd_prep_inputs.R"," ",run.name," ",proj.end, " ", run.group2, " ", decomp.step)
   print(prep.job)
   system(prep.job)
 }
 
-# Cache prevalence surveys
+# Cache prevalence surveys  - THIS PART OF THE PIPELINE NEEDS IMPROVING
 # if(!file.exists(paste0(input.dir, 'prev_surveys.csv'))){
 #   prev.job <- paste0("qsub -l m_mem_free=4G -l fthread=1 -l h_rt=00:10:00 -q all.q -N prev_cache_", run.name," -P ",cluster.project," ",
 #                      "-e /share/temp/sgeoutput/", user, "/errors ",
@@ -85,13 +95,7 @@ if(!file.exists(paste0(input.dir, "population/"))) {
 #   print(prev.job)
 #   system(prev.job)
 # }
-## I compiled all of our prevalence surveys for GBD 2019, so copying from here for now.
-## Cache_prev_surveys_age_sex.R should be updated to ensure it aligns with this data set.
-## It should, because I updated our supplemental survey data set, but worth double-checking to make sure all location-years are there
-## Also, we should decide what subnationals we want to use age, sex-specific data in; 
-## Currently just using 15-49 data in Kenya counties due to small n
-file.copy(from = '/share/hiv/data/prevalence_surveys/GBD2019_prevalence_surveys_decomp4_FORUSE.csv', 
-          to = paste0("/ihme/hiv/epp_input/gbd19/", run.name, "/prev_surveys.csv"))
+
 
 # Prepare ART proportions
 if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
@@ -100,18 +104,19 @@ if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
                      "-o /share/temp/sgeoutput/", user, "/output ",
                      "-hold_jid eppasm_prep_inputs_", run.name,',eppasm_prev_cache_', run.name,' ',
                      code.dir, "gbd/singR_shell.sh ", 
-                    code.dir, "gbd/prep_art_props.R ", run.name)
+                     code.dir, "gbd/prep_art_props.R ", run.name)
   print(prop.job)
   system(prop.job)
 }
+
 
 
 ## Launch EPP
 for(loc in loc.list) {    ## Run EPPASM
 
       epp.string <- paste0("qsub -l m_mem_free=7G -l fthread=1 -l h_rt=24:00:00 -l archive -q all.q -P ", cluster.project, " ",
-                           "-e /share/temp/sgeoutput/", user, "/errors ",
-                           "-o /share/temp/sgeoutput/", user, "/output ",
+                           "-e /share/homes/djahag/errors2 ",
+                           "-o /share/homes/djahag/output2 ",
                            "-N ", loc, "_eppasm ",
                            "-t 1:", n.draws, " ",
                            "-hold_jid eppasm_prep_inputs_", run.name," ",
@@ -122,8 +127,8 @@ for(loc in loc.list) {    ## Run EPPASM
       system(epp.string)
 
     # # ## Draw compilation
-     draw.string <- paste0("qsub -l m_mem_free=30G -l fthread=1 -l h_rt=00:10:00 -q all.q -P ", cluster.project, " ",
-                          "-e /share/temp/sgeoutput/", user, "/errors ",
+     draw.string <- paste0("qsub -l m_mem_free=30G -l fthread=1 -l h_rt=01:00:00 -q all.q -P ", cluster.project, " ",
+                           "-e /share/homes/djahag/errors2 ",
                            "-o /share/temp/sgeoutput/", user, "/output ",
                            "-N ", loc, "_save_draws ",
                            "-hold_jid ", loc, "_eppasm ",
@@ -132,10 +137,9 @@ for(loc in loc.list) {    ## Run EPPASM
                            run.name, " ", loc, ' ', n.draws, ' TRUE ', paediatric)
      print(draw.string)
      system(draw.string)
-    
-     
-     plot.string <- paste0("qsub -l m_mem_free=11G -l fthread=1 -l h_rt=00:15:00 -l archive -q all.q -P ", cluster.project, " ",
-                           "-e /share/temp/sgeoutput/", user, "/errors ",
+ 
+     plot.string <- paste0("qsub -l m_mem_free=20G -l fthread=1 -l h_rt=00:15:00 -l archive -q all.q -P ", cluster.project, " ",
+                           "-e /share/homes/djahag/errors2 ",
                            "-o /share/temp/sgeoutput/", user, "/output ",
                            "-N ", loc, "_plot_eppasm ",
                            "-hold_jid ", loc, "_save_draws ",
@@ -145,32 +149,18 @@ for(loc in loc.list) {    ## Run EPPASM
      print(plot.string)
      system(plot.string)
      
-     ## Prep for reckoning
-     prep.string <- paste0("qsub -l m_mem_free=30G -l fthread=1 -l h_rt=02:00:00 -l archive -q all.q -P ", cluster.project, " ",
-                           "-e /share/temp/sgeoutput/", user, "/errors ",
-                           "-o /share/temp/sgeoutput/", user, "/output ",
-                           "-N ", loc, "_apply_age_splits ",
-                           "-hold_jid ", loc,"_save_draws ",
-                           code.dir, "gbd/singR_shell.sh ",
-                           code.dir, "gbd/apply_age_splits.R ",
-                           loc, " ", run.name, " ", "190630_rhino")
-     print(prep.string)
-     system(prep.string)
+ 
      
-     
-
-
 }
 
+#Make sure all locations are done
 check_loc_results(loc.list,paste0('/share/hiv/epp_output/gbd19/', run.name, '/compiled/'),prefix="",postfix=".csv")
 
-# ## Fill in missing India and Kenya locations
-# system(paste0("qsub -P ", cluster.project," -pe multi_slot 1 -N missing_subnats ", code.dir, "shell_R.sh ", code.dir, "epp-feature-reset/gbd/create_missing_subnats.R ", run.name))
-# 
-
-# ## Split India states to Urban Rural and generate values for Territories
-system(paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:10:00 -l archive -q all.q -P ", cluster.project, " ",
-               "-e /share/temp/sgeoutput/", user, "/errors ",
+if(est_India){
+##If using EPP-ASM for India, can use this code
+### Split India states to Urban Rural and generate values for Territories
+system(paste0("qsub -l m_mem_free=200G -l fthread=1 -l h_rt=08:00:00 -l archive -q all.q -P ", cluster.project, " ",
+               "-e /share/homes/djahag/errors ",
                "-o /share/temp/sgeoutput/", user, "/output ",
                "-N ", "india_split ",
                code.dir, "gbd/singR_shell.sh ",
@@ -179,82 +169,72 @@ system(paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:10:00 -l archive -q
 
 
 #Make sure all locations that originally went through Spectrum are there
-done.locs <- gsub("_under1_splits.csv","",list.files(paste0("/ihme/hiv/epp_output/gbd19/",run.name,"/compiled/"),pattern="_under1_splits.csv"))
-setdiff(loc.table[grepl("1",group) & spectrum==1,ihme_loc_id],done.locs)
-
 check_loc_results(loc.table[grepl("1",group) & spectrum==1,ihme_loc_id],paste0('/share/hiv/epp_output/gbd19/', run.name, '/compiled/'),prefix="",postfix=".csv")
-
-##Create all plots
-# # ## Create aggregate and age-specific plots
-for(loc in done.locs){
-  
-  if(loc %in% loc.table[grepl("IND",ihme_loc_id) & epp != 1,ihme_loc_id]){
-  
- 
-    plot.string <- paste0("qsub -l m_mem_free=8G -l fthread=1 -l h_rt=00:15:00 -l archive -q all.q -P ", cluster.project, " ",
-                          "-e /share/temp/sgeoutput/", user, "/errors ",
-                          "-o /share/temp/sgeoutput/", user, "/output ",
-                          "-N ", loc, "_plot_eppasm ",
-                          "-hold_jid ", loc, "_save_draws ",
-                          code.dir, "gbd/singR_shell.sh ",
-                          code.dir, "gbd/main_plot_output.R ",
-                          loc, " ", run.name, ' ', paediatric, ' ', compare.run)
-    print(plot.string)
-    system(plot.string)
-
-  }
-
-
-## Prep for reckoning
-prep.string <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:20:00 -l archive -q all.q -P ", cluster.project, " ",
-                     "-e /share/temp/sgeoutput/", user, "/errors ",
-                     "-o /share/temp/sgeoutput/", user, "/output ",
-                     "-N ", loc, "_apply_age_splits ",
-                     "-hold_jid ", loc,"_save_draws ",
-                     code.dir, "gbd/singR_shell.sh ",
-                     code.dir, "gbd/apply_age_splits.R ",
-                     loc, " ", run.name, " ", run.name)
-print(prep.string)
-system(prep.string)
-
-
-
 }
+
 
 ## Compile plots
   plot.holds <- paste(paste0(loc.list, '_plot_eppasm'), collapse = ",")
-  plot.string <- paste0("qsub -l m_mem_free=1G -l fthread=1 -l h_rt=00:15:00 -q all.q -P ", cluster.project, " ",
-                        "-e /share/temp/sgeoutput/", user, "/errors ",
+  plot.string <- paste0("qsub -l m_mem_free=1G -l fthread=1 -l h_rt=00:35:00 -q all.q -P ", cluster.project, " ",
+                        "-e /share/homes/djahag/errors ",
                         "-o /share/temp/sgeoutput/", user, "/output ",
                         "-N ", "compile_plots_eppasm ",
-                        # "-hold_jid ", plot.holds, " ",
+                        "-hold_jid ", plot.holds, " ",
                         code.dir, "gbd/singR_shell.sh ", 
                         code.dir, "gbd/compile_plots.R ",
                         run.name)
   print(plot.string)
   system(plot.string)
 
+## Aggregate to higher levels for EPP-ASM child locs - not India because it goes through Spectrum
+## Prepare for post-reckoning steps
+eppasm_parents <-  c("KEN","ZAF","ETH","KEN_44793" ,"KEN_44794","KEN_44795", "KEN_44796" ,"KEN_44797", "KEN_44798","KEN_44799", "KEN_44800","NGA")
+all_loc_list <- c(loc.list,eppasm_parents)
+
+## Aggregation and reckoning prep for higher levels
+if(reckon_prep){
+  for(loc in all_loc_list){
+    if(loc %in% eppasm_parents){
+    prep.string <- paste0("qsub -l m_mem_free=100G -l fthread=2 -l h_rt=02:00:00 -l archive -q all.q -P ", cluster.project, " ",
+                          "-e /share/homes/djahag/errors2 ",
+                          "-o /share/homes/djahag/output ",
+                          "-N ", loc, "_aggregate ",
+                          "-hold_jid ", loc,"_save_draws ",
+                          code.dir, "gbd/singR_shell.sh ",
+                          code.dir, "gbd/aggregate.R ",
+                          loc, " ", run.name, " ", spec.name," ",2)
+    print(prep.string)
+    system(prep.string)
+  }
+    
+
+  prep.string <- paste0("qsub -l m_mem_free=50G -l fthread=1 -l h_rt=02:00:00 -l archive -q all.q -P ", cluster.project, " ",
+                        "-e /share/homes/djahag/errors ",
+                        "-o /share/temp/sgeoutput/", user, "/output ",
+                        "-N ", loc, "_apply_age_splits ",
+                        "-hold_jid ", loc,"_aggregate ",
+                        code.dir, "gbd/singR_shell.sh ",
+                        code.dir, "gbd/apply_age_splits.R ",
+                        loc, " ", run.name, " ", spec.name)
+  print(prep.string)
+  system(prep.string)
+
+    }
+}
 
  
-#Move over India  inputs for spectrum
-ind.locs <- loc.table[grepl("IND",ihme_loc_id) & spectrum==1,ihme_loc_id]
-inputs <- names(subset.inputs)[!names(subset.inputs) %in% c("migration","population","ASFR","TFR","SRB","incidence","prevalence")]
-for(input.x in inputs){
-  for(loc_i in ind.locs){
-file.copy(from = paste0('/share/hiv/spectrum_input/190610_piranha/',input.x,"/",loc_i,".csv"), 
-            to = paste0('/share/hiv/spectrum_input/190630_rhino/',input.x,"/",loc_i,".csv") )
+check_loc_results(c(loc.list,eppasm_parents),paste0("/ihme/hiv/spectrum_prepped/art_draws/",spec.name,"/"),prefix="",postfix="_ART_data.csv")
+
+#Move over India inputs for Spectrum if estimated through EPP-ASM
+if(est_India){
+  ind.locs <- loc.table[grepl("IND",ihme_loc_id) & spectrum==1,ihme_loc_id]
+  inputs <- list(inc="incidence",prev="prevalence")
+  for(input.x in names(inputs)){
+    for(loc_i in ind.locs){
+      file.copy(from = paste0('/ihme/hiv/epp_output/gbd19/',run.name,'/compiled/IND_',input.x,"/",loc_i,".csv"), 
+                to = paste0('/share/hiv/spectrum_input/190630_rhino/',inputs[input.x],"/",loc_i,".csv") )
+    }
   }
 }
 
-inputs <- list(inc="incidence",prev="prevalence")
-for(input.x in names(inputs)){
-  for(loc_i in ind.locs){
-    file.copy(from = paste0('/ihme/hiv/epp_output/gbd19/',run.name,'/compiled/IND_',input.x,"/",loc_i,".csv"), 
-              to = paste0('/share/hiv/spectrum_input/190630_rhino/',inputs[input.x],"/",loc_i,".csv") )
-  }
-}
-  
-  
-  
-  
   

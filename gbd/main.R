@@ -39,13 +39,14 @@ art.sub <- TRUE
 prev.sub <- TRUE
 sexincrr.sub <- TRUE
 plot.draw <- FALSE
-anc.sub <- c.args[['anc_sub']]
-anc.backcast <- c.args[['anc_backcast']]
+geoadjust <- c.args[['anc_sub']]
 age.prev <- c.args[['age_prev']]
 popadjust <- c.args[['popadjust']]
 anc.rt <- c.args[['anc_rt']]
 epp.mod <- c.args[['epp_mod']]
-geoadjust <- TRUE
+geoadjust <- c.args[['anc_sub']]
+no_anc <- c.args[['no_anc']]
+anc.prior.sub < c.args[['anc_prior_sub']]
 
 ### Paths
 out.dir <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, "/", loc)
@@ -61,24 +62,24 @@ devtools::load_all()
 loc.table <- fread(paste0('/share/hiv/epp_input/gbd19/', run.name, '/location_table.csv'))
 
 # These locations do not have information from LBD team estimates
+# ZAF ANC data are considered nationally representative so no GeoADjust - this could be challenged in the future
 no_geo_adj <-  c(loc.table[epp ==1 & grepl("IND",ihme_loc_id),ihme_loc_id],"PNG","HTI","DOM", loc.table[epp ==1 & grepl("ZAF",ihme_loc_id),ihme_loc_id])
 
-# ANC data
+# ANC data bias adjustment
 if(geoadjust & !loc %in% no_geo_adj){
-  geoadjust  <<- TRUE
+  geoadjust  <- TRUE
 } else {
-  geoadjust  <<- FALSE
-  anc.sub <<- FALSE
+  geoadjust  <- FALSE
 }
-
 
 ### Code
 ## Read in spectrum object, sub in GBD parameters
-dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, pop.sub, anc.sub, anc.backcast, prev.sub, art.sub, sexincrr.sub, popadjust, age.prev, paediatric, anc.rt, geoadjust)
+dt <- read_spec_object(loc, i, start.year, stop.year, trans.params.sub, pop.sub, prev.sub, art.sub, sexincrr.sub, popadjust, age.prev, paediatric, anc.rt, geoadjust, anc.prior.sub)
 
 
 if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 
+#Some substitutions to get things running
 if(grepl('NGA', loc)){
   temp <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped_subpop/MWI.rds'))
   specfp <- sub.pop.params.specfp(attr(temp, 'specfp'), loc, i)
@@ -100,36 +101,34 @@ if(loc %in% c('UGA', 'TZA')){
   attr(dt, 'specfp')$artmx_timerr <- temp.artmxrr
 }
 
-## TODO - fix ancsitedat in BEN, MOZ, ZWE, ZMB, TGO, SEN, MDG, NER, NAM, GMB, GHA, SLE, CIV
+if(run.name %in% c("190630_fixonARTIND","190630_fixonARTIND_tightprior")){
+  temp <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped_subpop/MWI.rds'))
+  temp.artmxrr <- attr(temp, 'specfp')$artmx_timerr
+  attr(dt, 'specfp')$artmx_timerr <- temp.artmxrr
+}
+
 attr(dt, 'eppd')$ancsitedat = unique(attr(dt, 'eppd')$ancsitedat)
 ## TODO - fix se = 0 data points in ZAF
 attr(dt, 'eppd')$hhs <- attr(dt, 'eppd')$hhs[!attr(dt, 'eppd')$hhs$se == 0,]
 attr(dt, 'specfp')$relinfectART <- 0.3
 
-#This value is borrowed from Malawi, should check whether something else is needed
 if(grepl("IND",loc)){
+  if(no_anc){
+    attr(dt,"eppd")$ancsitedat <- NULL
+  }
   attr(dt, 'specfp')$art_alloc_mxweight <- 0.5
 }
 
-if(grepl('MDG', loc)){
-  attr(dt, 'eppd')$anc.used <- attr(dt, 'eppd')$anc.used[grepl('feminine', names(attr(dt, 'eppd')$anc.used))]
-  eppd <- attr(dt, 'eppd')
-  eppd$ancsitedat <- eppd$ancsitedat[eppd$ancsitedat$subpop == 'population feminine restante',]
-  eppd$anc.prev <- eppd$anc.prev[grepl('%', rownames(eppd$anc.prev)),]
-  zero.prev <- rownames(eppd$anc.prev)[rowSums(eppd$anc.prev, na.rm = T) == 0]
-  eppd$anc.prev <- eppd$anc.prev[!rownames(eppd$anc.prev) %in% zero.prev,]
-  eppd$anc.used <- eppd$anc.used[!names(eppd$anc.used) %in% paste0('population feminine restante.', zero.prev)]
-  eppd$anc.prev <- eppd$anc.prev[rownames(eppd$anc.prev) %in% gsub('population feminine restante.', '', names(eppd$anc.used)),]
-  eppd$ancsitedat <- eppd$ancsitedat[eppd$ancsitedat$site %in% rownames(eppd$anc.prev),]
-}
-
 ## Fit model
-fit <- fitmod(dt, eppmod = epp.mod, B0 = 1e5, B = 1e3, number_k = 500)
+fit <- eppasm::fitmod(dt, eppmod = epp.mod, B0 = 1e5, B = 1e3, number_k = 500)
+
 
 data.path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
 if(!file.exists(data.path)){
-  save_data(loc, attr(dt, 'eppd'), run.name)
+save_data(loc, attr(dt, 'eppd'), run.name)
 }
+
+
 ## When fitting, the random-walk based models only simulate through the end of the
 ## data period. The `extend_projection()` function extends the random walk for r(t)
 ## through the end of the projection period.
@@ -146,7 +145,7 @@ output.dt[,run_num := i]
 dir.create(out.dir, showWarnings = FALSE)
 write.csv(output.dt, paste0(out.dir, '/', i, '.csv'), row.names = F)
 
-## under-1 splits
+# ## under-1 splits
 if(paediatric){
   split.dt <- get_under1_splits(result, attr(dt, 'specfp'))
   split.dt[,run_num := i]
@@ -160,3 +159,8 @@ write.csv(param, paste0(out.dir,'/theta_', i, '.csv'), row.names = F)
 if(plot.draw){
   plot_15to49_draw(loc, output.dt, attr(dt, 'eppd'), run.name)
 }
+
+
+
+##END
+

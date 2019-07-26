@@ -758,11 +758,10 @@ sub.cd4.prog <- function(dt, loc, k){
   return(dt)
 }
 
-sub.anc <- function(loc, dt, i, uncertainty) {
+geo_adj <- function(loc, dt, i, uncertainty) {
   # Make adjustments to ANC coming from PJNZ files ** add more **
   ## Prep EPP data
   # Choose subpopulation for substitution
-  if(geoadjust){
     print("using LBD Adjustment")
     
     ##Bring in the matched data - reading in as CSV rather then fread because the latter seems to add quotations when there are escape characters, which messes up the matching
@@ -771,7 +770,7 @@ sub.anc <- function(loc, dt, i, uncertainty) {
     setnames(anc.dt.all,c("clinic","year_id"),c("site","year"))
     eppd <- attr(dt, "eppd")
   
-    # Collapse up to single provincial ANC site for ZAF and SWZ
+    # Collapse up to single provincial ANC site for ZAF and SWZ - NEED TO DECIDE WHETHER TO DO THIS GOING FORWARD
     # Extract first year of data and use that site as provincial site
     # if(grepl("ZAF", loc) | grepl("SWZ", loc)) {
     #   first.year <- min(as.integer(colnames(eppd$anc.prev)[sapply(colnames(eppd$anc.prev), function(col) {
@@ -800,7 +799,7 @@ sub.anc <- function(loc, dt, i, uncertainty) {
     #   }
     #   
     #   
-    #   #Use an average site prediction value
+    #   #Use average site prediction value
     #   yearly.means <- anc.dt[,.(nm=mean(site_pred,na.rm=TRUE)),by=year]  
     #   site.means <- anc.dt[,.(nm.all=mean(mean,na.rm=TRUE)),by=year] 
     #   all.means <- merge(yearly.means,site.means,by="year_id")
@@ -814,7 +813,7 @@ sub.anc <- function(loc, dt, i, uncertainty) {
     #   
     # }
     
-    
+    #ANOTHER IMPROVEMENT POTENTIAL GOING FORWARD
     #Use Adm 1 mean where available
     # anc.dt[,adm0_mean := ifelse(!is.na(adm1_mean),adm1_mean,adm0_mean)]
     # anc.dt[,adm0_lower := ifelse(!is.na(adm1_lower),adm1_lower,adm0_lower)]
@@ -898,103 +897,6 @@ sub.anc <- function(loc, dt, i, uncertainty) {
      
      attr(dt, "eppd") <- eppd
 
-  } else if(backcast){
-      
-      if(grepl("ZAF", loc) | grepl("SWZ", loc)) {
-        # Collapse up to single provincial ANC site
-        # Extract first year of data and use that site as provincial site
-        first.year <- min(as.integer(colnames(eppd$anc.prev)[sapply(colnames(eppd$anc.prev), function(col) {
-          !all(is.na(eppd$anc.prev[, col]))
-        })]))
-        prov.sites <- which(!is.na(eppd$anc.prev[, as.character(first.year)]))
-        for(i in 1:length(prov.sites)) {
-          prov.site <- prov.sites[i]
-          row.lower <- prov.sites[i] + 1
-          row.upper <- ifelse(i == length(prov.sites), nrow(eppd$anc.prev), prov.sites[i + 1] - 1)
-          eppd$anc.used[row.lower:row.upper] <- F
-          # Sum administrative units to provincial level
-          site.prev <- eppd$anc.prev[row.lower:row.upper,]
-          site.n <- eppd$anc.n[row.lower:row.upper,]
-          site.pos <- site.prev * site.n
-          sub.pos <- colSums(site.pos, na.rm = T)
-          sub.n <- colSums(site.n, na.rm = T)
-          sub.prev <- sub.pos / sub.n
-          # Append to provincial site
-          for(c in colnames(eppd$anc.prev)) {
-            if(is.na(eppd$anc.prev[prov.site, c])) {
-              eppd$anc.prev[prov.site, c] <- sub.prev[c]
-              eppd$anc.n[prov.site, c] <- sub.n[c]
-            }
-          }
-        }
-      } else {
-        # Add imputed data
-        # Read ANC data from back cast
-        anc.dir <- "/ihme/hiv/anc_backcast/"
-        recent <- max(as.integer(list.files(anc.dir)))
-        anc.path <- paste0(anc.dir, recent, "/data/", loc, ".csv")
-        if (length(list.files(anc.path))==0){
-          recent <- sort(as.integer(list.files(anc.dir)), decreasing=TRUE)[2]
-          anc.path <- paste0(anc.dir, recent, "/data/", loc, ".csv")
-          
-        }
-        
-        if(!file.exists(anc.path)){
-          print("Note: No backcast data")
-        }
-        
-        if(file.exists(anc.path)){
-          
-          anc.dt <- fread(anc.path)
-          anc.dt[, clinic := gsub("[^[:alnum:] ]", "",clinic)] # For differences in naming like added special characters
-          anc.dt <- anc.dt[order(clinic)]
-          # Add draw level data from ANC backcast
-          for(cl in unique(anc.dt$clinic)) {
-            clinic.idx <- which(grepl(gsub(" ", "", cl),gsub(" ", "",  rownames(eppd$anc.prev))))
-            sub.dt <- anc.dt[clinic == cl]
-            sub.dt[pred == "Data", (paste0("draw_", i)) := mean]
-            for(y in unique(anc.dt[pred == "Data"]$year_id)) {
-              eppd$anc.prev[clinic.idx, as.character(y)] <- sub.dt[year_id == y, get(paste0("draw_", i))]
-              eppd$anc.n[clinic.idx, as.character(y)] <- sub.dt[year_id == y, n]
-            }
-          }
-          
-          
-          # Reformat EPP object with updated data
-          if(!length(dt)){
-            attr(dt, "eppd") <- eppd
-          } else{
-            attr(dt[[gen.pop]], "eppd") <- eppd
-          }
-        }
-      }
-      
-      #str(attr(dt,"eppd")$ancrtsite.prev)
-      
-      set.list.attr <- function(obj, attrib, value.lst)
-        mapply(function(set, value){ attributes(set)[[attrib]] <- value; set}, 
-               obj, value.lst)
-      
-      if(!is.null(nrow(eppd$ancrtsite.prev)) ){
-        if(nrow(eppd$ancrtsite.prev)<length(eppd$anc.used)){
-          enter.mat <- matrix(,length(eppd$anc.used)-nrow(eppd$ancrtsite.prev),38,)
-          eppd$ancrtsite.prev = rbind(eppd$ancrtsite.prev,  enter.mat)
-          eppd$ancrtsite.n = rbind(eppd$ancrtsite.n,  enter.mat)
-        }
-      }
-      
-      ###NOTE THIS WILL NOT WORK BECAUSE MELT_ANCSITE_DATA IS MOVED - NEED TO UPDATE 
-      if(!length(dt)){
-        eppd <- list()
-        eppd[[1]] <- attr(dt, 'eppd')
-        eppd <- Map("[[<-", eppd, "ancsitedat", lapply(eppd, melt_ancsite_data))
-        attr(dt, 'eppd') <- eppd[[1]]
-      } else{
-        attr(dt[[gen.pop]], "likdat") <- epp::fnCreateLikDat(eppd, anchor.year = floor(attr(dt[[gen.pop]], "specfp")$proj.steps[1]))
-      }
-      
-    }
-    
     return(dt)
   }
   
@@ -1056,3 +958,22 @@ sub.anc <- function(loc, dt, i, uncertainty) {
     attr(dt, 'specfp')$incrr_sex <- rr
     return(dt)
   }
+  
+  #We use a different prior for MDG or else the curve goes to 0. It is worth rethinking this strategy for all no-survey locations.
+  sub.anc.prior <- function(dt,loc){
+   if(loc %in%  c( "MDG" )){
+      ancbias.pr.mean <<- 0.0
+      ancbias.pr.sd <<- 0.001
+    } else {
+      ancbias.pr.mean <<- 0.15
+      ancbias.pr.sd <<- 1
+    }
+    return(dt)
+  }
+  
+  
+  
+  
+  
+  
+  

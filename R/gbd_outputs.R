@@ -281,7 +281,7 @@ split_u5_gbd2017 <- function(dt){
 }
 
 split_u1 <- function(dt, loc, run.name){
-  pop <- fread(paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/population_splits/", loc, '.csv'))
+  pop <- data.table(fread(paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/population_splits/", loc, '.csv')))
   u1.pop <- pop[age_group_id < 5]
   u1.pop[,pop_total := sum(population), by = c('sex_id', 'year_id')]
   u1.pop[,pop_prop := population/sum(population), by = c('sex_id', 'year_id')]
@@ -415,9 +415,12 @@ save_data <- function(loc, eppd, run.name){
   }else{
     prevdata <- NULL
   }
-  
+  if(exists("ancsitedat",where=eppd)){
   ancdata <- data.table(eppd$ancsitedat)
-  ancdata <- ancdata[,.(sex = 'female', age = agegr, type = 'point', model = 'ANC Site', indicator = 'Prevalence', mean = prev, upper = NA, lower = NA, year, age_group_id = 24)]
+  ancdata <- ancdata[type=="ancss",.(sex = 'female', age = agegr, type = 'point', model = 'ANC Site', indicator = 'Prevalence', mean = prev, upper = NA, lower = NA, year, age_group_id = 24)]
+  } else {
+    ancdata <- NULL
+  }
   output <- rbind(prevdata, ancdata, use.names = T)
   output[, metric := 'Rate']
   output[, ihme_loc_id := loc]

@@ -37,15 +37,6 @@ if(grepl('1', loc.table[ihme_loc_id == loc, group])){
   val <- prepare_spec_object_group2(loc)
 }
 
-dtx <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped/', loc, '.rds'))
-anc.old <- attr(dtx,"eppd")$ancsitedat
-
-if(length(unique(anc.old$site)) > length(unique(attr(val,"eppd")$ancsitedat)$site)){
-  stop()
-} else {
-  saveRDS(val, paste0('/share/hiv/data/PJNZ_EPPASM_prepped_subpop/', loc, '.rds'))
-}
-
 
 
 

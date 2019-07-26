@@ -12,7 +12,7 @@ if(length(args) > 0) {
   run.name <- args[2]
   spec.name <- args[3]
 } else {
-  loc <- "MWI"
+  loc <- "MDG"
   run.name <- "190630_rhino2"
   spec.name <- "190630_rhino"
 }
@@ -63,7 +63,8 @@ loc_id <- locations[ihme_loc_id==loc,location_id]
 
 
 ## Bring in EPPASM Draws
-spec_draw <- data.table(fread(paste0(eppasm_dir,"/compiled/",loc,".csv")))
+
+spec_draw <- data.table(fread(paste0(eppasm_dir,"/compiled/",loc,".csv"), blank.lines.skip = T))
 spec_draw[age >= 5,age_gbd :=  age - age%%5]
 spec_draw[age %in% 1:4, age_gbd := 1]
 spec_draw[age == 0, age_gbd := 0 ]
@@ -212,6 +213,11 @@ print(spec_combined)
 ##################################################################################################################
 ## Format and Output
 setnames(spec_combined,"year","year_id")
+
+##This is a fluke in gbd2019 that we get negative values - need to figure out how it could happen
+if(loc == "KEN_44796" | loc == "KEN_35646"){
+  spec_combined[run_num==880 & year_id==2019 & sex_id==2 & age_group_id==13,pop_lt200:=0]
+}
 
 print(head(spec_combined))
 assert_values(spec_combined, names(spec_combined), "gte", 0)

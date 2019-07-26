@@ -15,14 +15,16 @@ user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
 code.dir <- paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/gbdeppaiml/")
 
 ## Packages
-library(data.table);library(tidyr);library(dplyr)
+library(data.table);library(tidyr);library(dplyr);library(parallel)
 
 ## Arguments
 args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
   run.name <- args[1]
+  decomp.step <- args[2]
 } else {
   run.name <- "190630_rhino2"
+  decomp.step <- decomp.step
 }
 
 
@@ -66,7 +68,7 @@ nat.urban15 <- 0.38
 nat.rural15 <- 0.17
 
 ### Code
-## Create minor territories
+### Create minor territories ###
 file.list <- list.files(dir.list, "IND_")
 locs <- gsub(".csv", "", file.list)
 ind.locs <- loc.table[grepl("IND", ihme_loc_id) & level == 4, ihme_loc_id]
@@ -81,21 +83,23 @@ dir.create(spec.prev.path, showWarnings = F)
 ind.locs.epp <- loc.table[grepl("IND",ihme_loc_id) & epp==1,ihme_loc_id]
 
 ##Sum counts across populations
-all.ind <- rbindlist(lapply(ind.locs.epp , function(loc_i) {
+all.ind <- lapply(ind.locs.epp , function(loc_i) {
   sum.dt <- fread(paste0(dir.list,loc_i,".csv"))
   return(sum.dt)
-}))
+})
 
+all.ind <- rbindlist(all.ind)
 stratum <- colnames(all.ind)[colnames(all.ind) %in% c("age", "sex", "year","run_num")]
 cols <- colnames(all.ind)[!colnames(all.ind) %in% stratum]
 measures <- cols
 sum.ind <- all.ind[ ,lapply(.SD,sum), .SDcols=cols, by=stratum]
 
+print("filling in missing locs")
 for(m_loc in missing.locs){
   m_loc1 <- loc.table[ihme_loc_id==m_loc,location_id]
-  pop <- get_population(location_id = m_loc1, decomp_step = "step4", 
-                        age_group_id=unique(get.age.groups$age_group_id), 
-                        single_year_age = TRUE, year_id=-1, 
+  pop <- get_population(location_id = m_loc1, decomp_step = decomp.step,
+                        age_group_id=unique(get.age.groups$age_group_id),
+                        single_year_age = TRUE, year_id=-1,
                         sex_id=c('1','2'))
   pop <- merge(pop,unique(get.age.groups),by="age_group_id")
   pop <- merge(pop,sex_groups,by="sex_id")
@@ -103,17 +107,18 @@ for(m_loc in missing.locs){
   pop$age <- as.integer(pop$age)
   combined.pop <- merge(sum.ind,pop[,.(year,sex,age,population)], by=c('year','sex','age'))
   combined.pop$pop.ratio <- combined.pop$population/combined.pop$pop
-  
+
   m_loc_all <- combined.pop[ ,lapply(.SD,"*",pop.ratio), .SDcols=cols, by=stratum]
-  
+
   write.csv(m_loc_all,paste0(dir.list,m_loc,".csv"),row.names = FALSE)
-  
+
 }
 
-##Sum counts across populations for children
+##Sum counts across populations for children under 1
 file.list <- list.files(dir.list, "_under1_splits.csv")[grepl("IND",list.files(dir.list, "_under1_splits.csv"))]
-all.ind <- rbindlist(lapply(locs[nchar(locs) == 8], function(loc_i) {
-  sum.dt <- fread(paste0(dir.list,file.list[grepl(loc_i,file.list)]))
+all.ind <- rbindlist(lapply(ind.locs.epp , function(loc_i) {
+  print(loc_i)
+  sum.dt <- fread(paste0(dir.list,loc_i,".csv"))
   return(sum.dt)
 }))
 
@@ -126,34 +131,36 @@ child_age <- age_groups[age_group_id %in% c(2,3,4)]
 child_age[age_group_name == "Early Neonatal", age_group_name := "enn"]
 child_age[age_group_name == "Late Neonatal", age_group_name := "lnn"]
 child_age[age_group_name == "Post Neonatal", age_group_name := "pnn"]
-
+print("filling in missing locs for under 1s")
 for(m_loc in missing.locs){
   m_loc1 <- loc.table[ihme_loc_id==m_loc,location_id]
-  pop <- get_population(location_id = m_loc1, decomp_step = "step4", 
+  pop <- get_population(location_id = m_loc1, decomp_step = decomp.step,
                         age_group_id=unique(child_age$age_group_id), year_id=-1 )
-  
+
   m_loc2 <- loc.table[ihme_loc_id=="IND",location_id]
-  pop_ind <- get_population(location_id = m_loc2, decomp_step = "step4", 
+  pop_ind <- get_population(location_id = m_loc2, decomp_step = decomp.step,
                             age_group_id=unique(child_age$age_group_id), year_id=-1 )
-  
+
   pop <- merge(pop,unique(child_age),by="age_group_id")
   pop_ind <- merge(pop_ind,unique(child_age),by="age_group_id")
   all_pop <- merge(unique(pop[,.(year_id,age_group_name,population)]),unique(pop_ind[,.(year_id,age_group_name,population)]), by=c("age_group_name","year_id"))
   all_pop$pop.ratio <- all_pop$population.x/all_pop$population.y
-  
+
   setnames(all_pop ,c('year_id'), c('year'))
   sum.ind <- melt(sum.ind,id.var=c("year","run_num"))
   setnames(sum.ind,'variable','age_group_name')
   sum.ind <- merge(sum.ind,all_pop[,.(year,age_group_name,pop.ratio)],by=c('year','age_group_name'))
-  
+
   cols <- "value"
   m_loc_all <- sum.ind[ ,lapply(.SD,"*",pop.ratio), .SDcols=cols, by=c('year','age_group_name','run_num')]
   m_loc_all <- spread(m_loc_all, key=c('age_group_name'), value="value")
-  
+
   write.csv(m_loc_all,paste0(dir.list,m_loc,"_under1_splits.csv"),row.names = FALSE)
-  
+
 }
 
+### Urban rural splitting ###
+print("filling state locs")
 # Fix zero
 min <- min(prop.dt[prop > 0 , prop])
 prop.dt[prop == 0, prop := min]
@@ -161,31 +168,13 @@ prop.dt[, prop := prop / sum(prop)]
 missing.children <- setdiff(loc.table[grepl("IND", ihme_loc_id) & level == 5, ihme_loc_id], prop.dt$ihme_loc_id)
 missing.parents <- unique(loc.table[location_id %in% loc.table[ihme_loc_id %in% missing.children, parent_id], ihme_loc_id])
 
-state.locs <- c(loc.table[grepl("IND", ihme_loc_id) & level == 4 & epp == 1, ihme_loc_id],"IND_44538") #"IND_44538"-not run through EPP
-#state = state.locs[1]
+state.locs <- c(loc.table[grepl("IND", ihme_loc_id) & level == 4 & epp == 1, ihme_loc_id],"IND_44538") #"IND_44538"-not run through EPP but filled in above
+
 for(state in state.locs) {
   loc.id <- as.integer(strsplit(state, "_")[[1]][2])
   children <- loc.table[parent_id == loc.id, ihme_loc_id]
-  
-  # 
-  # if(state == "IND_44538"){
-  #   sum.dt <- 
-  # }
-  # 
-  # pop.dt <- rbindlist(lapply(c(state, children), function(loc) {
-  #     id <- strsplit(loc, "_")[[1]][2]
-  #     path <- paste0(pop.dir[[1]], loc, ".csv")
-  #     if(!file.exists(path)){
-  #     path <- paste0(pop.dir[[2]],loc, ".csv")  
-  #     }
-  #     dt <- fread(path)
-  #     sum.dt <- dt[age_group_id %in% get.age.groups, .(population = sum(population)), by = c("year_id", "location_id","age_group_id","sex_id")]
-  # }))
-  # 
-  # 
-  # setnames(pop.dt, "year_id", "year")
-  
-  
+  children <- children[!children %in% done]
+
   # set proportions - note no missing parents for now, else these could be age/sex specific (info available in PDFs above)
   if(state %in% missing.parents) {
     props <- data.table()
@@ -214,8 +203,7 @@ for(state in state.locs) {
     dir <- dir.list
     path <- paste0(dir, state,".csv")
     state.dt <- fread(path)
-    #Transpose and reduce to relevant measure - depends on final EPP-ASM output
-    ##Create key to ID outputs that are in counts versus proportions/rates
+
     stratum <-  c("age", "sex", "year","run_num")
     cols <- colnames(state.dt)[!colnames(state.dt) %in% stratum]
     measures <- cols
