@@ -377,8 +377,7 @@ plot_age_specific <- function(loc, run.name, compare.run = NA, paediatric = FALS
   ## we only have unaids all-ages results in rate space
   if(paediatric){
     unaids.dt <- fread('/share/hiv/data/UNAIDS_extract/UNAIDS_results_2018.csv')
-    unaids.dt <- unaids.dt[ihme_loc_id == loc & age_group_id  %in% c(22,24) & metric == c.metric,.(age_group_id, sex = 'both', type = 'line',
-                                                                                                   indicator = measure, model = 'UNAIDS18', mean, lower, upper, year = year_id)]
+    unaids.dt <- unaids.dt[ihme_loc_id == loc & age_group_id  %in% c(22,24) & metric == c.metric,.(age_group_id, sex = 'both', type = 'line',indicator = measure, model = 'UNAIDS18', mean, lower, upper, year = year_id)]
     unaids.dt[age_group_id == 22, age := 'All']
     unaids.dt[age_group_id == 24, age := '15 to 49']
     unaids.dt[, age_group_id := NULL]

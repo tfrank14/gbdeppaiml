@@ -580,6 +580,53 @@ sub.prev <- function(loc, dt){
   return(dt)
 }
 
+## This function appends region-specific fertility rate ratio parameters, provided by Jeff Eaton (June 2019)
+add_frr_noage_fp <- function(obj){
+  path <- '/share/hiv/data/FRR_EPPASM/'
+  frr_country <- read.csv(paste0(path, 'frr_country_sex12m.csv'), stringsAsFactors = FALSE) %>%
+    mutate(sex12m_z = (sex12m - 40) / 15)
+  frr_age <- read.csv(paste0(path, 'frr_age.csv'),stringsAsFactors = FALSE)
+  frr_cd4cat <- read.csv(paste0(path, 'frr_cd4.csv'), stringsAsFactors = FALSE)
+  
+  frr_art_age <- read.csv(paste0(path, 'frr_art.csv'), stringsAsFactors = FALSE)
+  frr_15to19sex12m <- read.csv(paste0(path, "frr_15to19sex12m_z.csv"),header = FALSE) %>% as.numeric
+  
+  
+  country_name <- attr(obj, "country")
+  
+  region_name <- filter(frr_country, country == country_name)$region
+  
+  if(length(region_name) != 1){
+    region_name <- 'East'
+    country_name <- 'Malawi'
+  }
+  
+  frr_beta_country <- filter(frr_country, country == country_name)$frr_country
+  if(length(frr_beta_country) != 1)
+    frr_beta_country <- 1.0
+  
+  frr_beta_cd4 <- frr_cd4cat$est
+  frr_beta_age <- filter(frr_age, region == region_name)$est * frr_beta_country
+  
+  sex12m_z <- filter(frr_country, country == country_name)$sex12m_z
+  frr_15to19 <- frr_beta_age[1] * frr_15to19sex12m ^ sex12m_z
+  
+  frr_beta_art_age <- frr_art_age$est * frr_beta_country
+  
+  ## Construct FRR parameter inputs
+  frr_cd4 <- array(NA, c(7, 8, length(start.year:stop.year)))
+  frr_cd4[] <- outer(frr_beta_cd4, c(frr_15to19, frr_15to19, frr_beta_age[2:7]), "*")
+  
+  frr_art <- array(NA, c(3, 7, 8, length(start.year:stop.year)))
+  frr_art[1,,,] <- frr_cd4
+  frr_art[2:3,,,] <- rep(frr_beta_art_age[c(1, 1:7)], each = 2*7)
+  
+  attr(obj, "specfp")$frr_cd4 <- frr_cd4
+  attr(obj, "specfp")$frr_art <- frr_art
+  
+  obj
+}
+
 sub.prev.granular <- function(dt, loc){
   ## TODO: Add this to cache prev
   age.prev.dt <- fread(paste0("/ihme/hiv/epp_input/gbd19/", run.name, "/prev_surveys.csv"))

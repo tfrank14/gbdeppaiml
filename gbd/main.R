@@ -19,6 +19,7 @@ if(length(args) > 0) {
   i <- as.integer(Sys.getenv("SGE_TASK_ID"))
   paediatric <- as.logical(args[4])
 } else {
+
 	run.name <- "190630_rhino2"
 	loc <- "MDG"
 	stop.year <- 2019
@@ -81,14 +82,6 @@ if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 
 #Some substitutions to get things running
 if(grepl('NGA', loc)){
-  temp <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped_subpop/MWI.rds'))
-  specfp <- sub.pop.params.specfp(attr(temp, 'specfp'), loc, i)
-  specfp <- update_spectrum_fixpar(specfp, proj_start = start.year, proj_end = stop.year,time_epi_start = specfp$ss$time_epi_start, popadjust=popadjust)
-  attr(temp, 'specfp') <- specfp
-  temp.frr <- attr(temp, 'specfp')$frr_cd4
-  temp.frr.art <- attr(temp, 'specfp')$frr_art
-  attr(dt, 'specfp')$frr_cd4 <- temp.frr
-  attr(dt, 'specfp')$frr_art <- temp.frr.art
   temp <- attr(dt, 'specfp')$paedsurv_artcd4dist
   temp[temp < 0] <- 0
   attr(dt, 'specfp')$paedsurv_artcd4dist <- temp
