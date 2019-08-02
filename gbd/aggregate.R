@@ -13,7 +13,7 @@ rm(list=ls())
 windows <- Sys.info()[1]=="Windows"
 root <- ifelse(windows,"J:/","/home/j/")
 user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
-code.dir <- paste0(ifelse(windows, "H:/", "/homes/"), user, "/hiv_gbd2019/")
+code.dir <- paste0(ifelse(windows, "H:/", "/homes/"), user, "/gbdeppaiml/")
 
 ## Packages
 library(data.table); library(parallel); library(assertable)
@@ -27,9 +27,9 @@ if(length(args) > 0) {
   ncores <- args[4]
   
 } else {
-  parent <- "IND"
-  run.name <- "190630_rhino2"
-  spec.run.name <- "190630_rhino"
+  parent <- "NGA"
+  run.name <- "190730_quetzal"
+  spec.run.name <- "190730_quetzal"
   ncores <- 2
 }
 
@@ -71,22 +71,18 @@ while(length(new.parents) > 0) {
 
 ##Read in the first child file, then append the sum of other files to reduce memory requirements  
 suffix <- ".csv"
-loc_i <- child.locs[1]
-if(length(child.locs) > 1){
+combined.dt <- rbindlist(
+  mclapply(child.locs,
+           function(loc) {
+             in.path <- paste0(in.dir, "/", loc, suffix)
+             dt <- fread(in.path,blank.lines.skip = T)
+             dt[,pop_gt350 := as.numeric(pop_gt350)]
+             return(dt)
+           }
+           , mc.cores = ncores)
+)
 
-  combined.dt <- fread(paste0(in.dir, "/", loc_i, suffix))
-    for(loc in child.locs[2:length(child.locs)]){
-    print(loc)
-    in.path <- paste0(in.dir, "/", loc, suffix)
-    dt <- fread(in.path,blank.lines.skip = T)
-    dt[,pop_gt350 := as.numeric(pop_gt350)]
-    combined.dt <- rbind(combined.dt,dt)[, lapply(.SD, sum), by = id.vars]
-    rm(dt)
-  }
-  out.dt <- combined.dt
-} else {
-  out.dt <- fread(paste0(in.dir, "/", loc_i, suffix))
-}
+out.dt <- combined.dt[, lapply(.SD, sum), by = id.vars]
 
 
 #Add this column to prevent future issues 
@@ -100,16 +96,16 @@ write.csv(out.dt, out.path, row.names=F)
 ##Under 1 splits
 suffix <- "_under1_splits.csv"
 id.vars <- c("year","run_num")
-  loc_i <- child.locs[1]
-  combined.dt <- fread(paste0(in.dir, "/", loc_i, suffix))
-  for(loc in child.locs[2:length(child.locs)]){
-    print(loc)
-    in.path <- paste0(in.dir, "/", loc, suffix)
-    dt <- fread(in.path,blank.lines.skip = T)
-    combined.dt <- rbind(combined.dt,dt)[, lapply(.SD, sum), by = id.vars]
-    rm(dt)
-  }
-  out.dt <- combined.dt
+combined.dt <- rbindlist(
+  lapply(child.locs,
+           function(loc) {
+             in.path <- paste0(in.dir, "/", loc, suffix)
+             dt <- fread(in.path,blank.lines.skip = T)
+             return(dt)
+           })
+)
+
+out.dt <- combined.dt[, lapply(.SD, sum), by = id.vars]
 
 out.path <- paste0(in.dir, "/", parent, suffix)
 write.csv(out.dt, out.path, row.names=F)

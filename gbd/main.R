@@ -20,8 +20,8 @@ if(length(args) > 0) {
   paediatric <- as.logical(args[4])
 } else {
 
-	run.name <- "190630_rhino2"
-	loc <- "MDG"
+	run.name <- "190730_quetzal"
+	loc <- "MWI"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- TRUE
@@ -45,9 +45,8 @@ age.prev <- c.args[['age_prev']]
 popadjust <- c.args[['popadjust']]
 anc.rt <- c.args[['anc_rt']]
 epp.mod <- c.args[['epp_mod']]
-geoadjust <- c.args[['anc_sub']]
 no_anc <- c.args[['no_anc']]
-anc.prior.sub < c.args[['anc_prior_sub']]
+anc.prior.sub <- c.args[['anc_prior_sub']]
 
 ### Paths
 out.dir <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, "/", loc)
@@ -82,6 +81,14 @@ if(epp.mod == 'rspline'){attr(dt, 'specfp')$equil.rprior <- TRUE}
 
 #Some substitutions to get things running
 if(grepl('NGA', loc)){
+  temp <- readRDS(paste0('/share/hiv/data/PJNZ_EPPASM_prepped_subpop/MWI.rds'))
+  specfp <- sub.pop.params.specfp(attr(temp, 'specfp'), loc, i)
+  specfp <- update_spectrum_fixpar(specfp, proj_start = start.year, proj_end = stop.year,time_epi_start = specfp$ss$time_epi_start, popadjust=popadjust)
+  attr(temp, 'specfp') <- specfp
+  temp.frr <- attr(temp, 'specfp')$frr_cd4
+  temp.frr.art <- attr(temp, 'specfp')$frr_art
+  attr(dt, 'specfp')$frr_cd4 <- temp.frr
+  attr(dt, 'specfp')$frr_art <- temp.frr.art
   temp <- attr(dt, 'specfp')$paedsurv_artcd4dist
   temp[temp < 0] <- 0
   attr(dt, 'specfp')$paedsurv_artcd4dist <- temp
@@ -105,16 +112,8 @@ attr(dt, 'eppd')$ancsitedat = unique(attr(dt, 'eppd')$ancsitedat)
 attr(dt, 'eppd')$hhs <- attr(dt, 'eppd')$hhs[!attr(dt, 'eppd')$hhs$se == 0,]
 attr(dt, 'specfp')$relinfectART <- 0.3
 
-if(grepl("IND",loc)){
-  if(no_anc){
-    attr(dt,"eppd")$ancsitedat <- NULL
-  }
-  attr(dt, 'specfp')$art_alloc_mxweight <- 0.5
-}
-
 ## Fit model
 fit <- eppasm::fitmod(dt, eppmod = epp.mod, B0 = 1e5, B = 1e3, number_k = 500)
-
 
 data.path <- paste0('/share/hiv/epp_input/gbd19/', run.name, '/fit_data/', loc, '.csv')
 if(!file.exists(data.path)){

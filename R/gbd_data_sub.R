@@ -313,12 +313,8 @@ sub.paeds <- function(dt, loc, k, start.year = 1970, stop.year = 2019){
   }
   
   
-  art.path <-paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/AIM_assumptions/program_stats/ART_children/UNAIDS_2019/", loc, "_Child_ART_cov.csv") 
-  if(file.exists(art.path)){
-    art <- fread(art.path)
-  }else{
-    art <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/childARTcoverage/', loc, '.csv'))
-  }
+  art <- fread(paste0('/share/hiv/epp_input/gbd19/paeds/childARTcoverage/', loc, '.csv'))
+  
 
   art <- extend.years(art, years)
   if(min(art$year) > start.year){
@@ -816,56 +812,7 @@ geo_adj <- function(loc, dt, i, uncertainty) {
     anc.dt.all  <- anc.dt.all[,c( "clinic","year_id","mean","site_pred","adm0_mean","adm0_lower", "adm0_upper","subpop","high_risk")]
     setnames(anc.dt.all,c("clinic","year_id"),c("site","year"))
     eppd <- attr(dt, "eppd")
-  
-    # Collapse up to single provincial ANC site for ZAF and SWZ - NEED TO DECIDE WHETHER TO DO THIS GOING FORWARD
-    # Extract first year of data and use that site as provincial site
-    # if(grepl("ZAF", loc) | grepl("SWZ", loc)) {
-    #   first.year <- min(as.integer(colnames(eppd$anc.prev)[sapply(colnames(eppd$anc.prev), function(col) {
-    #     !all(is.na(eppd$anc.prev[, col]))
-    #   })]))
-    #   prov.sites <- which(!is.na(eppd$anc.prev[, as.character(first.year)]))
-    #   for(kk in 1:length(prov.sites)) {
-    #     prov.site <- prov.sites[kk]
-    #     row.lower <- prov.sites[kk] + 1
-    #     row.upper <- ifelse(i == length(prov.sites), nrow(eppd$anc.prev), prov.sites[kk + 1] - 1)
-    #     eppd$anc.used[row.lower:row.upper] <- F
-    #     # Sum administrative units to provincial level
-    #     site.prev <- eppd$anc.prev[row.lower:row.upper,]
-    #     site.n <- eppd$anc.n[row.lower:row.upper,]
-    #     site.pos <- site.prev * site.n
-    #     sub.pos <- colSums(site.pos, na.rm = T)
-    #     sub.n <- colSums(site.n, na.rm = T)
-    #     sub.prev <- sub.pos / sub.n
-    #     # Append to provincial site
-    #     for(c in colnames(eppd$anc.prev)) {
-    #       if(is.na(eppd$anc.prev[prov.site, c])) {
-    #         eppd$anc.prev[prov.site, c] <- sub.prev[c]
-    #         eppd$anc.n[prov.site, c] <- sub.n[c]
-    #       }
-    #     }
-    #   }
-    #   
-    #   
-    #   #Use average site prediction value
-    #   yearly.means <- anc.dt[,.(nm=mean(site_pred,na.rm=TRUE)),by=year]  
-    #   site.means <- anc.dt[,.(nm.all=mean(mean,na.rm=TRUE)),by=year] 
-    #   all.means <- merge(yearly.means,site.means,by="year_id")
-    #   anc.dt <- merge(anc.dt[clinic %in% rownames(eppd$anc.prev)[eppd$anc.used],],all.means,by="year_id")
-    #   anc.dt <- anc.dt[,site_pred := nm]
-    #   anc.dt <- anc.dt[,mean := nm.all]
-    #   anc.dt[,nm:=NULL]; anc.dt[,nm.all := NULL]
-    #   
-    #   attr(dt, "eppd") <- eppd
-    #   attr(dt, "likdat") <- fnCreateLikDat(eppd, anchor.year = floor(attr(dt, "eppfp")$proj.steps[1]))
-    #   
-    # }
-    
-    #ANOTHER IMPROVEMENT POTENTIAL GOING FORWARD
-    #Use Adm 1 mean where available
-    # anc.dt[,adm0_mean := ifelse(!is.na(adm1_mean),adm1_mean,adm0_mean)]
-    # anc.dt[,adm0_lower := ifelse(!is.na(adm1_lower),adm1_lower,adm0_lower)]
-    # anc.dt[,adm0_upper := ifelse(!is.na(adm1_upper),adm1_upper,adm0_upper)]
-    # 
+
     if(uncertainty){
       #Choose 1 from 1000 draws of uncertainty using adm0_mean bounds
       for(row in 1:nrow(anc.dt.all)){
@@ -939,7 +886,6 @@ geo_adj <- function(loc, dt, i, uncertainty) {
      
      all.anc <- as.data.frame(all.anc)
      
-     
      eppd$ancsitedat <- all.anc
      
      attr(dt, "eppd") <- eppd
@@ -956,7 +902,7 @@ geo_adj <- function(loc, dt, i, uncertainty) {
     # }
     
     #Still need to split 2019 to sublocations
-    for(c.year in c('UNAIDS_2019', 'UNAIDS_2017', 'UNAIDS_2016', 'UNAIDS_2015', '140520')){
+    for(c.year in c('UNAIDS_2017', 'UNAIDS_2016', 'UNAIDS_2015', '140520')){
       art.path <-paste0(root, "WORK/04_epi/01_database/02_data/hiv/04_models/gbd2015/02_inputs/extrapolate_ART/PV_testing/", c.year, "/", temp.loc, "_Adult_ART_cov.csv") 
       if(file.exists(art.path)){
         print(c.year)

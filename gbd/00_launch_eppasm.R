@@ -13,18 +13,19 @@ library(data.table)
 
 ## Arguments
 
-run.name <- "190630_rhino2"
-spec.name <- "190630_rhino"
-compare.run <- NA
+run.name <- "190730_quetzal"
+spec.name <- "190730_quetzal"
+compare.run <- "190630_rhino2"
 proj.end <- 2019
-n.draws <- 1000
+n.draws <- 100
 run.group2 <- FALSE
 paediatric <- TRUE
 cluster.project <- "proj_hiv"
 plot_ART <- FALSE
 est_India <- FALSE
 reckon_prep <- TRUE
-decomp.step <- "step4"
+decomp.step <- "step3"
+
 
 
 ### Paths
@@ -97,26 +98,28 @@ if(!file.exists(paste0(input.dir, "population/"))) {
 # }
 
 
-# Prepare ART proportions
-if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
-  prop.job <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:20:00 -q all.q -P ", cluster.project," -N eppasm_art_prop_", run.name," -hold_jid eppasm_prev_cache_", run.name, " ", 
-                     "-e /share/temp/sgeoutput/", user, "/errors ",
-                     "-o /share/temp/sgeoutput/", user, "/output ",
-                     "-hold_jid eppasm_prep_inputs_", run.name,',eppasm_prev_cache_', run.name,' ',
-                     code.dir, "gbd/singR_shell.sh ", 
-                     code.dir, "gbd/prep_art_props.R ", run.name)
-  print(prop.job)
-  system(prop.job)
-}
+# Prepare ART proportions - don't actually need this as an input, only for splitting
+# if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
+#   prop.job <- paste0("qsub -l m_mem_free=2G -l fthread=1 -l h_rt=00:20:00 -q all.q -P ", cluster.project," -N eppasm_art_prop_", run.name," -hold_jid eppasm_prev_cache_", run.name, " ", 
+#                      "-e /share/temp/sgeoutput/", user, "/errors ",
+#                      "-o /share/temp/sgeoutput/", user, "/output ",
+#                      "-hold_jid eppasm_prep_inputs_", run.name,',eppasm_prev_cache_', run.name,' ',
+#                      code.dir, "gbd/singR_shell.sh ", 
+#                      code.dir, "gbd/prep_art_props.R ", run.name)
+#   print(prop.job)
+#   system(prop.job)
+# }
 
 
 
 ## Launch EPP
-for(loc in loc.list) {    ## Run EPPASM
-
+for(loc in loc.list){    ## Run EPPASM
+      compare.run <- "190630_rhino2"
+      dir.create(paste0("/share/homes/djahag/errors/",loc,"/"))
+      dir.create(paste0("/share/homes/djahag/output/",loc,"/"))
       epp.string <- paste0("qsub -l m_mem_free=7G -l fthread=1 -l h_rt=24:00:00 -l archive -q all.q -P ", cluster.project, " ",
-                           "-e /share/homes/djahag/errors2 ",
-                           "-o /share/homes/djahag/output2 ",
+                           "-e ",paste0("/share/homes/djahag/errors/",loc,"/")," ",
+                           "-o ",paste0("/share/homes/djahag/output/",loc,"/")," ",
                            "-N ", loc, "_eppasm ",
                            "-t 1:", n.draws, " ",
                            "-hold_jid eppasm_prep_inputs_", run.name," ",
@@ -128,18 +131,22 @@ for(loc in loc.list) {    ## Run EPPASM
 
     # # ## Draw compilation
      draw.string <- paste0("qsub -l m_mem_free=30G -l fthread=1 -l h_rt=01:00:00 -q all.q -P ", cluster.project, " ",
-                           "-e /share/homes/djahag/errors2 ",
+                           "-e /share/homes/djahag/errors ",
                            "-o /share/temp/sgeoutput/", user, "/output ",
                            "-N ", loc, "_save_draws ",
                            "-hold_jid ", loc, "_eppasm ",
-                          code.dir, "gbd/singR_shell.sh ",
+                            code.dir, "gbd/singR_shell.sh ",
                            code.dir, "gbd/compile_draws.R ",
                            run.name, " ", loc, ' ', n.draws, ' TRUE ', paediatric)
      print(draw.string)
      system(draw.string)
+     
+     if(grepl("ETH",loc)){
+       compare.run <- "190630_rhino_eth"
+     }
  
      plot.string <- paste0("qsub -l m_mem_free=20G -l fthread=1 -l h_rt=00:15:00 -l archive -q all.q -P ", cluster.project, " ",
-                           "-e /share/homes/djahag/errors2 ",
+                           "-e /share/homes/djahag/errors ",
                            "-o /share/temp/sgeoutput/", user, "/output ",
                            "-N ", loc, "_plot_eppasm ",
                            "-hold_jid ", loc, "_save_draws ",
@@ -149,9 +156,9 @@ for(loc in loc.list) {    ## Run EPPASM
      print(plot.string)
      system(plot.string)
      
- 
-     
+
 }
+
 
 #Make sure all locations are done
 check_loc_results(loc.list,paste0('/share/hiv/epp_output/gbd19/', run.name, '/compiled/'),prefix="",postfix=".csv")
@@ -175,7 +182,7 @@ check_loc_results(loc.table[grepl("1",group) & spectrum==1,ihme_loc_id],paste0('
 
 ## Compile plots
   plot.holds <- paste(paste0(loc.list, '_plot_eppasm'), collapse = ",")
-  plot.string <- paste0("qsub -l m_mem_free=1G -l fthread=1 -l h_rt=00:35:00 -q all.q -P ", cluster.project, " ",
+  plot.string <- paste0("qsub -l m_mem_free=30G -l fthread=1 -l h_rt=00:35:00 -q all.q -P ", cluster.project, " ",
                         "-e /share/homes/djahag/errors ",
                         "-o /share/temp/sgeoutput/", user, "/output ",
                         "-N ", "compile_plots_eppasm ",
@@ -195,14 +202,14 @@ all_loc_list <- c(loc.list,eppasm_parents)
 if(reckon_prep){
   for(loc in all_loc_list){
     if(loc %in% eppasm_parents){
-    prep.string <- paste0("qsub -l m_mem_free=100G -l fthread=2 -l h_rt=02:00:00 -l archive -q all.q -P ", cluster.project, " ",
-                          "-e /share/homes/djahag/errors2 ",
+    prep.string <- paste0("qsub -l m_mem_free=100G -l fthread=20 -l h_rt=02:00:00 -l archive -q all.q -P ", cluster.project, " ",
+                          "-e /share/homes/djahag/errors ",
                           "-o /share/homes/djahag/output ",
                           "-N ", loc, "_aggregate ",
                           "-hold_jid ", loc,"_save_draws ",
                           code.dir, "gbd/singR_shell.sh ",
                           code.dir, "gbd/aggregate.R ",
-                          loc, " ", run.name, " ", spec.name," ",2)
+                          loc, " ", run.name, " ", spec.name," ",20)
     print(prep.string)
     system(prep.string)
   }

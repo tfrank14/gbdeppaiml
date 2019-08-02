@@ -14,10 +14,10 @@ if(length(args) > 0) {
 	run.group2 <- args[3]
 	decomp.step <- args[4]
 } else {
-	run.name <- "190630_rhino2"
+	run.name <- "190730_quetzal"
 	proj.end <- 2019
 	run.group2 <- FALSE
-	decomp.step <- "decomp.step"
+	decomp.step <- "step3"
 }
 
 out.dir <- paste0('/ihme/hiv/epp_input/gbd19/', run.name, "/")
@@ -42,7 +42,7 @@ if(run.group2){
   
 }else{
   ## Prep inputs for standard group 1 epp locations
-  epp.locs <- loc.table[epp == 1, location_id]
+  epp.locs <- loc.table[epp == 1 & !grepl("IND",ihme_loc_id), location_id]
 
 }
 
@@ -102,23 +102,27 @@ invisible(lapply(india.locs, function(c.location_id) {
 }))
 
 ## Migration
-mig <- fread(paste0('/ihme/fertilitypop/population/popReconstruct/133/upload/net_migration_single_year.csv'))[measure_id==19]
-#fread(paste0('/ihme/fertilitypop/gbd_2017/population/modeling/popReconstruct/v96/best/net_migrants.csv'))
-age_groups <- get_ids("age_group")
-age_groups[age_group_name=="<1 year",age_group_name := "0"]
-mig = merge(mig,age_groups, by='age_group_id')
-mig <- mig[age_group_name %in% c(0:95)]
-mig$age_group_name <- as.integer(mig$age_group_name)
-mig = merge(mig,loc.table[,.(location_id,ihme_loc_id)],by="location_id")
-mig = mig[,c('age_group_id','measure_id'):=NULL]
-setnames(mig, c('year_id', 'sex_id','mean','age_group_name'), c('year', 'sex','value','age'))
+# mig <- fread(paste0('/ihme/fertilitypop/population/popReconstruct/133/upload/net_migration_single_year.csv'))[measure_id==19]# 
+# age_groups <- get_ids("age_group")
+# age_groups[age_group_name=="<1 year",age_group_name := "0"]
+# mig = merge(mig,age_groups, by='age_group_id')
+# mig <- mig[age_group_name %in% c(0:95)]
+# mig$age_group_name <- as.integer(mig$age_group_name)
+# mig = merge(mig,loc.table[,.(location_id,ihme_loc_id)],by="location_id")
+# mig = mig[,c('age_group_id','measure_id'):=NULL]
+# setnames(mig, c('year_id', 'sex_id','mean','age_group_name'), c('year', 'sex','value','age'))
 
+# fread(paste0('/ihme/fertilitypop/gbd_2017/population/modeling/popReconstruct/v96/best/net_migrants.csv'))
+# setnames(mig, c('year_id', 'sex_id'), c('year', 'sex'))
 
-mig[age > 80, age := 80]
-mig <- mig[year >= 1970, .(value = sum(value)), by = c('age', 'sex', 'year', 'ihme_loc_id')]
+##Copy migration from Spectrum Decomp 2 to avoid spikes
 dir.create(paste0(out.dir, '/migration'), showWarnings = F)
 invisible(lapply(epp.locs, function(c.location_id){
   c.iso <- loc.table[location_id == c.location_id, ihme_loc_id]
+  mig <- fread(paste0("/share/hiv/spectrum_input/190415_orca/migration/",c.iso,".csv"))
+  mig[age > 80, age := 80]
+  mig[,ihme_loc_id := c.iso]
+  mig <- mig[year >= 1970, .(value = sum(value)), by = c('age', 'sex', 'year', 'ihme_loc_id')]
   mig.loc <- mig[ihme_loc_id == c.iso]
   if(nrow(mig.loc) == 0){
     if(loc.table[ihme_loc_id == c.iso, level] > 3){

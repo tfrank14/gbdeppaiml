@@ -12,9 +12,9 @@ if(length(args) > 0) {
   run.name <- args[2]
   spec.name <- args[3]
 } else {
-  loc <- "MDG"
-  run.name <- "190630_rhino2"
-  spec.name <- "190630_rhino"
+  loc <- "ETH_44856"
+  run.name <- "190730_quetzal"
+  spec.name <- "190730_quetzal"
 }
 fill.draw <- T
 fill.na <- T
@@ -210,14 +210,10 @@ spec_combined[,(convert_vars2) := lapply(.SD,convert_to_rate),.SDcols=convert_va
 print(spec_combined)
 
 
+
 ##################################################################################################################
 ## Format and Output
 setnames(spec_combined,"year","year_id")
-
-##This is a fluke in gbd2019 that we get negative values - need to figure out how it could happen
-if(loc == "KEN_44796" | loc == "KEN_35646"){
-  spec_combined[run_num==880 & year_id==2019 & sex_id==2 & age_group_id==13,pop_lt200:=0]
-}
 
 print(head(spec_combined))
 assert_values(spec_combined, names(spec_combined), "gte", 0)
