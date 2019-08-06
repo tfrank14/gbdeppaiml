@@ -66,7 +66,7 @@ read_spec_object <- function(loc, i, start.year = 1970, stop.year = 2019, trans.
       
       print("Merging ANC bias offsets")
       
-      dt <- sub.anc(loc, dt, i, uncertainty=TRUE)
+      dt <- geo_adj(loc, dt, i, uncertainty=TRUE)
     } 
     
     if(sexincrr.sub){
