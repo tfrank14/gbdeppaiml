@@ -21,7 +21,7 @@ if(length(args) > 0) {
 } else {
 
 	run.name <- "190630_rhino2"
-	loc <- "MDG"
+	loc <- "SWZ"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- TRUE
@@ -47,7 +47,7 @@ anc.rt <- c.args[['anc_rt']]
 epp.mod <- c.args[['epp_mod']]
 geoadjust <- c.args[['anc_sub']]
 no_anc <- c.args[['no_anc']]
-anc.prior.sub < c.args[['anc_prior_sub']]
+anc.prior.sub <- TRUE
 
 ### Paths
 out.dir <- paste0('/ihme/hiv/epp_output/gbd19/', run.name, "/", loc)
@@ -128,6 +128,7 @@ save_data(loc, attr(dt, 'eppd'), run.name)
 if(epp.mod == 'rhybrid'){
   fit <- extend_projection(fit, proj_years = stop.year - start.year + 1)
 }
+
 
 ## Simulate model for all resamples, choose a random draw, get gbd outputs
 result <- gbd_sim_mod(fit, VERSION = 'R')
