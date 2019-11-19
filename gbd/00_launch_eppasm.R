@@ -12,11 +12,11 @@ date <- substr(gsub("-","",Sys.Date()),3,8)
 library(data.table)
 
 ## Arguments
-run.name <- "190630_rhino2"
+run.name <- "190814_testing"
 spec.name <- "190630_rhino"
-compare.run <- NA
+compare.run <- "190630_rhino2"
 proj.end <- 2019
-n.draws <- 1000
+n.draws <- 2
 run.group2 <- FALSE
 paediatric <- TRUE
 cluster.project <- "proj_hiv"
@@ -111,6 +111,7 @@ if(!file.exists(paste0(input.dir, 'art_prop.csv'))){
 
 
 ## Launch EPP
+loc <- "MWI"
 for(loc in loc.list) {    ## Run EPPASM
 
       epp.string <- paste0("qsub -l m_mem_free=7G -l fthread=1 -l h_rt=24:00:00 -l archive -q all.q -P ", cluster.project, " ",
@@ -131,7 +132,7 @@ for(loc in loc.list) {    ## Run EPPASM
                            "-o /share/temp/sgeoutput/", user, "/output ",
                            "-N ", loc, "_save_draws ",
                            "-hold_jid ", loc, "_eppasm ",
-                          code.dir, "gbd/singR_shell.sh ",
+                            code.dir, "gbd/singR_shell.sh ",
                            code.dir, "gbd/compile_draws.R ",
                            run.name, " ", loc, ' ', n.draws, ' TRUE ', paediatric)
      print(draw.string)

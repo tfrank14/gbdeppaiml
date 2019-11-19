@@ -20,8 +20,8 @@ if(length(args) > 0) {
   paediatric <- as.logical(args[4])
 } else {
 
-	run.name <- "190630_rhino2"
-	loc <- "SWZ"
+	run.name <- "190814_testing"
+	loc <- "MWI"
 	stop.year <- 2019
 	i <- 1
 	paediatric <- TRUE
@@ -44,7 +44,8 @@ geoadjust <- c.args[['anc_sub']]
 age.prev <- c.args[['age_prev']]
 popadjust <- c.args[['popadjust']]
 anc.rt <- c.args[['anc_rt']]
-epp.mod <- c.args[['epp_mod']]
+#epp.mod <- c.args[['epp_mod']]
+epp.mod <- "rhybrid"
 geoadjust <- c.args[['anc_sub']]
 no_anc <- c.args[['no_anc']]
 anc.prior.sub <- TRUE
@@ -111,6 +112,7 @@ if(grepl("IND",loc)){
   }
   attr(dt, 'specfp')$art_alloc_mxweight <- 0.5
 }
+
 
 ## Fit model
 fit <- eppasm::fitmod(dt, eppmod = epp.mod, B0 = 1e5, B = 1e3, number_k = 500)
